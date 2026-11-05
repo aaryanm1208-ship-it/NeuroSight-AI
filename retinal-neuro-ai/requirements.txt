@@ -8,3 +8,4 @@ numpy
 pillow
 matplotlib
 plotly
+scikit-learn
