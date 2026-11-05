@@ -94,51 +94,59 @@ class UNet(nn.Module):
 # ====================================================================
 @st.cache_resource(show_spinner=False)
 def load_models():
+    from pathlib import Path
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     unet = UNet(1, 1).to(device)
     resnet = models.resnet50(weights=ResNet50_Weights.DEFAULT)
     resnet.fc = nn.Identity()
     resnet = resnet.to(device)
     xgb_clf = xgb.XGBClassifier()
-    
-from pathlib import Path
 
-app_dir = Path(__file__).resolve().parent
-model_dirs = [
-    app_dir / "models",
-    app_dir.parent / "models"
-]
+    app_dir = Path(__file__).resolve().parent
+    model_dirs = [
+        app_dir / "models",
+        app_dir.parent / "models"
+    ]
 
-models_dir = next(
-    (
-        folder for folder in model_dirs
-        if (folder / "unet_vessel.pth").is_file()
-        and (folder / "xgboost_model.json").is_file()
-    ),
-    None
-)
-
-if models_dir is None:
-    raise FileNotFoundError(
-        "Model files not found. Checked: "
-        + " | ".join(str(folder) for folder in model_dirs)
+    models_dir = next(
+        (
+            folder for folder in model_dirs
+            if (folder / "unet_vessel.pth").is_file()
+            and (folder / "xgboost_model.json").is_file()
+        ),
+        None
     )
 
-unet_path = models_dir / "unet_vessel.pth"
-xgb_path = models_dir / "xgboost_model.json"
+    models_loaded = False
 
-models_loaded = False
+    if models_dir is None:
+        st.error(
+            "Model files not found. Checked: "
+            + " | ".join(str(folder) for folder in model_dirs)
+        )
+    else:
+        try:
+            unet.load_state_dict(
+                torch.load(
+                    str(models_dir / "unet_vessel.pth"),
+                    map_location=device
+                )
+            )
+            xgb_clf.load_model(
+                str(models_dir / "xgboost_model.json")
+            )
+            models_loaded = True
+        except Exception as e:
+            st.error(
+                f"Model loading failed: {type(e).__name__}: {e}"
+            )
 
-try:
-    unet.load_state_dict(torch.load(str(unet_path), map_location=device))
-    xgb_clf.load_model(str(xgb_path))
-    models_loaded = True
-except Exception as e:
-    st.error(f"Model loading failed: {type(e).__name__}: {e}")
+    unet.eval()
+    resnet.eval()
 
-unet.eval()
-resnet.eval()
-return unet, resnet, xgb_clf, device, models_loaded
+    return unet, resnet, xgb_clf, device, models_loaded
 
 unet_model, resnet50, clf, device, models_ready = load_models()
 
