@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -22,7 +22,7 @@ import os
 # ====================================================================
 st.set_page_config(
     page_title="NeuroSight AI | Clinical Suite",
-    page_icon="👁️",
+    page_icon="ðŸ‘ï¸",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -101,21 +101,44 @@ def load_models():
     resnet = resnet.to(device)
     xgb_clf = xgb.XGBClassifier()
     
-    unet_path = os.path.join("models", "unet_vessel.pth")
-    xgb_path = os.path.join("models", "xgboost_model.json")
-    
-    models_loaded = False
-    if os.path.exists(unet_path) and os.path.exists(xgb_path):
-        try:
-            unet.load_state_dict(torch.load(unet_path, map_location=device))
-            xgb_clf.load_model(xgb_path)
-            models_loaded = True
-        except Exception:
-            pass
-            
-    unet.eval()
-    resnet.eval()
-    return unet, resnet, xgb_clf, device, models_loaded
+from pathlib import Path
+
+app_dir = Path(__file__).resolve().parent
+model_dirs = [
+    app_dir / "models",
+    app_dir.parent / "models"
+]
+
+models_dir = next(
+    (
+        folder for folder in model_dirs
+        if (folder / "unet_vessel.pth").is_file()
+        and (folder / "xgboost_model.json").is_file()
+    ),
+    None
+)
+
+if models_dir is None:
+    raise FileNotFoundError(
+        "Model files not found. Checked: "
+        + " | ".join(str(folder) for folder in model_dirs)
+    )
+
+unet_path = models_dir / "unet_vessel.pth"
+xgb_path = models_dir / "xgboost_model.json"
+
+models_loaded = False
+
+try:
+    unet.load_state_dict(torch.load(str(unet_path), map_location=device))
+    xgb_clf.load_model(str(xgb_path))
+    models_loaded = True
+except Exception as e:
+    st.error(f"Model loading failed: {type(e).__name__}: {e}")
+
+unet.eval()
+resnet.eval()
+return unet, resnet, xgb_clf, device, models_loaded
 
 unet_model, resnet50, clf, device, models_ready = load_models()
 
@@ -234,13 +257,13 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    theme = st.radio("🎨 Interface Theme", ["Midnight Glass", "Clinical Pure"])
+    theme = st.radio("ðŸŽ¨ Interface Theme", ["Midnight Glass", "Clinical Pure"])
     st.markdown("---")
-    page = st.radio("🧭 Workspace", [
-        "🔬 Diagnostic Console", 
-        "👨‍⚕️ Patient Explanation", 
-        "📑 Export Reports", 
-        "⚙️ Architecture"
+    page = st.radio("ðŸ§­ Workspace", [
+        "ðŸ”¬ Diagnostic Console", 
+        "ðŸ‘¨â€âš•ï¸ Patient Explanation", 
+        "ðŸ“‘ Export Reports", 
+        "âš™ï¸ Architecture"
     ])
     st.markdown("---")
 
@@ -341,17 +364,17 @@ st.markdown(f"""
 # ====================================================================
 
 if not models_ready:
-    st.error("🚨 Neural Engine Offline: Missing weights in `models/` directory.")
+    st.error("ðŸš¨ Neural Engine Offline: Missing weights in `models/` directory.")
     st.stop()
 
 # -------------------------------------------------------------
 # PAGE 1: DIAGNOSTIC CONSOLE
 # -------------------------------------------------------------
-if page == "🔬 Diagnostic Console":
+if page == "ðŸ”¬ Diagnostic Console":
     st.markdown(f"<h1 style='font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; color: var(--text-main); margin-bottom: 0;'>Clinical Diagnostic Console</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color: var(--text-sub); font-size: 1.1rem; margin-bottom: 2rem;'>Precision microvascular analysis and neurological risk stratification.</p>", unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "tif"])
+    uploaded_file = st.file_uploader("Upload retinal image", type=["png", "jpg", "jpeg", "tif"], label_visibility="collapsed")
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert('RGB')
@@ -414,7 +437,7 @@ if page == "🔬 Diagnostic Console":
         if final_pred == 1:
             st.markdown(f"""
             <div class="badge-risk">
-                <div style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: #FCA5A5;">⚠️ Elevated Neurological & Microvascular Risk Detected &nbsp;|&nbsp; Confidence: {risk_conf:.1f}%</div>
+                <div style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: #FCA5A5;">âš ï¸ Elevated Neurological & Microvascular Risk Detected &nbsp;|&nbsp; Confidence: {risk_conf:.1f}%</div>
                 <div style="font-size: 1rem; color: #FECACA; line-height: 1.5;">
                     <strong>Primary Clinical Assessment:</strong> Observed retinal alterations indicate vascular rarefaction, high tortuosity, or degraded branching complexity. 
                     These patterns strongly correlate with early microvascular manifestations of <strong>Cerebrovascular Stroke, Alzheimer's Pathology, or Parkinsonian Neurodegeneration</strong>.
@@ -425,7 +448,7 @@ if page == "🔬 Diagnostic Console":
         else:
             st.markdown(f"""
             <div class="badge-normal">
-                <div style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: #6EE7B7;">✅ Low Risk / Physiologically Normal Vascular Pattern &nbsp;|&nbsp; Confidence: {risk_conf:.1f}%</div>
+                <div style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: #6EE7B7;">âœ… Low Risk / Physiologically Normal Vascular Pattern &nbsp;|&nbsp; Confidence: {risk_conf:.1f}%</div>
                 <div style="font-size: 1rem; color: #A7F3D0; line-height: 1.5;">
                     <strong>Primary Clinical Assessment:</strong> Microvascular branching density, fractal index, and vessel curvature remain well within standard healthy normative baseline distributions.
                 </div>
@@ -439,16 +462,16 @@ if page == "🔬 Diagnostic Console":
         st.markdown(f"<h3 style='color: var(--text-main); margin-bottom: 1rem;'>Visual Cortex</h3>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            st.markdown("<h5 style='color: var(--text-main);'>📷 Raw Source Modality</h5>", unsafe_allow_html=True)
-            st.image(image, use_container_width=True)
+            st.markdown("<h5 style='color: var(--text-main);'>ðŸ“· Raw Source Modality</h5>", unsafe_allow_html=True)
+            st.image(image, width="stretch")
         with col2:
-            st.markdown("<h5 style='color: var(--text-main);'>🕸️ Microvascular Mask</h5>", unsafe_allow_html=True)
-            st.image((seg_mask * 255).astype(np.uint8), use_container_width=True, clamp=True)
+            st.markdown("<h5 style='color: var(--text-main);'>ðŸ•¸ï¸ Microvascular Mask</h5>", unsafe_allow_html=True)
+            st.image((seg_mask * 255).astype(np.uint8), width="stretch", clamp=True)
         with col3:
-            st.markdown("<h5 style='color: var(--text-main);'>🔬 Fluorescent Overlay</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color: var(--text-main);'>ðŸ”¬ Fluorescent Overlay</h5>", unsafe_allow_html=True)
             overlay = img_resized.copy()
             overlay[seg_mask > 0.5] = [0, 255, 175] if theme == "Midnight Glass" else [255, 0, 100]
-            st.image(overlay, use_container_width=True)
+            st.image(overlay, width="stretch")
 
         st.markdown("---")
         
@@ -461,11 +484,11 @@ if page == "🔬 Diagnostic Console":
         m4.metric("Avg Caliber (VW)", f"{b_marks['VW']:.2f} px")
         
         # Reference Table
-        with st.expander("📋 **Expand Clinical Normative Reference Ranges**", expanded=True):
+        with st.expander("ðŸ“‹ **Expand Clinical Normative Reference Ranges**", expanded=True):
             st.table({
                 "Biomarker": ["Vessel Density (VD)", "Vessel Tortuosity (T)", "Fractal Dimension (FD)", "Average Vessel Width (VW)"],
                 "Observed Value": [f"{b_marks['VD']*100:.2f}%", f"{b_marks['T']:.2f}", f"{b_marks['FD']:.4f}", f"{b_marks['VW']:.2f} px"],
-                "Healthy Reference Range": ["10.0% – 17.5%", "1.10 – 1.35", "1.40 – 1.70", "2.0 – 4.5 px"],
+                "Healthy Reference Range": ["10.0% â€“ 17.5%", "1.10 â€“ 1.35", "1.40 â€“ 1.70", "2.0 â€“ 4.5 px"],
                 "Diagnostic Implication": [
                     "Low VD points to capillary drop-out / ischemia; High VD indicates neo-vascularization",
                     "High tortuosity indicates hemodynamic strain, hypertension, or microaneurysms",
@@ -483,9 +506,9 @@ if page == "🔬 Diagnostic Console":
             st.markdown("<h5 style='color: var(--text-sub);'>Linear Regression: Tortuosity vs Complexity</h5>", unsafe_allow_html=True)
             df_reg = pd.DataFrame({"Tortuosity": np.linspace(1.1, 2.5, 40), "Fractal Complexity": 1.70 - (0.28 * np.linspace(1.1, 2.5, 40)) + np.random.normal(0, 0.02, 40)})
             fig1 = px.scatter(df_reg, x="Tortuosity", y="Fractal Complexity", trendline="ols", trendline_color_override="#00E5FF", template=plot_template)
-            fig1.add_trace(go.Scatter(x=[b_marks['T']], y=[b_marks['FD']], mode='markers+text', name='Patient', text=['📍 Patient'], marker=dict(size=14, color='#FF1744' if final_pred==1 else '#00E5FF')))
+            fig1.add_trace(go.Scatter(x=[b_marks['T']], y=[b_marks['FD']], mode='markers+text', name='Patient', text=['ðŸ“ Patient'], marker=dict(size=14, color='#FF1744' if final_pred==1 else '#00E5FF')))
             fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=10, l=10, r=10))
-            st.plotly_chart(fig1, use_container_width=True)
+            st.plotly_chart(fig1, width="stretch")
             
         with g_col2:
             st.markdown("<h5 style='color: var(--text-sub);'>Radar Spider Profile vs Healthy Norm</h5>", unsafe_allow_html=True)
@@ -500,12 +523,12 @@ if page == "🔬 Diagnostic Console":
             fig2.add_trace(go.Scatterpolar(r=[70, 50, 85, 60, 70], theta=categories + [categories[0]], fill='toself', name='Healthy Norm', line=dict(color='#10B981', width=2), fillcolor='rgba(16, 185, 129, 0.2)'))
             fig2.add_trace(go.Scatterpolar(r=patient_vals + [patient_vals[0]], theta=categories + [categories[0]], fill='toself', name='Patient', line=dict(color='#FF1744' if final_pred==1 else '#00E5FF', width=2), fillcolor='rgba(255, 23, 68, 0.25)' if final_pred == 1 else 'rgba(0, 229, 255, 0.25)'))
             fig2.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), template=plot_template, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=10, l=10, r=10))
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, width="stretch")
 
 # -------------------------------------------------------------
 # PAGE 2: PATIENT EXPLANATION
 # -------------------------------------------------------------
-elif page == "👨‍⚕️ Patient Explanation":
+elif page == "ðŸ‘¨â€âš•ï¸ Patient Explanation":
     st.markdown(f"<h1 style='font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; color: var(--text-main); margin-bottom: 0;'>Your Eye Health Summary</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color: var(--text-sub); font-size: 1.1rem; margin-bottom: 2rem;'>A simple, plain-English breakdown of what the AI found in your eye scan.</p>", unsafe_allow_html=True)
     
@@ -535,10 +558,10 @@ elif page == "👨‍⚕️ Patient Explanation":
         st.markdown("<div class='glass-panel'>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='color: var(--accent); margin-top: 0;'>2. What do the numbers mean?</h3>", unsafe_allow_html=True)
         
-        st.markdown(f"**💧 1. Vessel Density ({d['marks']['VD']*100:.1f}%)** — *How well-covered your eye is with blood vessels.* (Like an irrigation system watering a garden).")
-        st.markdown(f"**🧬 2. Vessel Tortuosity ({d['marks']['T']:.2f})** — *How straight or curved the vessels are.* (Like a garden hose; high curves mean higher pressure).")
-        st.markdown(f"**🌳 3. Fractal Dimension ({d['marks']['FD']:.2f})** — *Branching complexity.* (Like healthy branches on a tree).")
-        st.markdown(f"**📏 4. Vessel Width ({d['marks']['VW']:.1f} px)** — *Thickness of the vessels.* (Ensuring smooth, unobstructed blood flow).")
+        st.markdown(f"**ðŸ’§ 1. Vessel Density ({d['marks']['VD']*100:.1f}%)** â€” *How well-covered your eye is with blood vessels.* (Like an irrigation system watering a garden).")
+        st.markdown(f"**ðŸ§¬ 2. Vessel Tortuosity ({d['marks']['T']:.2f})** â€” *How straight or curved the vessels are.* (Like a garden hose; high curves mean higher pressure).")
+        st.markdown(f"**ðŸŒ³ 3. Fractal Dimension ({d['marks']['FD']:.2f})** â€” *Branching complexity.* (Like healthy branches on a tree).")
+        st.markdown(f"**ðŸ“ 4. Vessel Width ({d['marks']['VW']:.1f} px)** â€” *Thickness of the vessels.* (Ensuring smooth, unobstructed blood flow).")
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("Please upload an image in the **Diagnostic Console** first.")
@@ -546,7 +569,7 @@ elif page == "👨‍⚕️ Patient Explanation":
 # -------------------------------------------------------------
 # PAGE 3: EXPORT REPORTS
 # -------------------------------------------------------------
-elif page == "📑 Export Reports":
+elif page == "ðŸ“‘ Export Reports":
     st.markdown(f"<h1 style='font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; color: var(--text-main); margin-bottom: 0;'>Electronic Health Record (EHR) Export</h1>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     if 'report_data' in st.session_state:
@@ -564,24 +587,24 @@ elif page == "📑 Export Reports":
             <hr style="border-color: var(--card-border); margin: 20px 0;">
             <div style="color: var(--text-sub);">
                 <strong>Computed Biomarkers:</strong><br>
-                • Vessel Density (VD): {d['marks']['VD']*100:.2f}%<br>
-                • Vessel Tortuosity (T): {d['marks']['T']:.2f}<br>
-                • Fractal Dimension (FD): {d['marks']['FD']:.4f}<br>
-                • Avg Vessel Width (VW): {d['marks']['VW']:.2f} px
+                â€¢ Vessel Density (VD): {d['marks']['VD']*100:.2f}%<br>
+                â€¢ Vessel Tortuosity (T): {d['marks']['T']:.2f}<br>
+                â€¢ Fractal Dimension (FD): {d['marks']['FD']:.4f}<br>
+                â€¢ Avg Vessel Width (VW): {d['marks']['VW']:.2f} px
             </div>
         </div>
         <br>
         """, unsafe_allow_html=True)
         
         report_str = f"NEUROSIGHT AI - CLINICAL REPORT\nScan ID: {d['scan_id']}\nDate: {datetime.datetime.now()}\nFile: {d['file']}\nResult: {'Elevated Risk' if d['pred'] == 1 else 'Normal/Low Risk'} ({d['conf']:.1f}%)\nMetrics: VD={d['marks']['VD']*100:.2f}%, T={d['marks']['T']:.2f}, FD={d['marks']['FD']:.4f}"
-        st.download_button("📥 Download Official .TXT Report", data=report_str, file_name=f"neurosight_{d['scan_id']}.txt")
+        st.download_button("ðŸ“¥ Download Official .TXT Report", data=report_str, file_name=f"neurosight_{d['scan_id']}.txt")
     else:
         st.info("Upload an image in the Diagnostic Console first to generate a report.")
 
 # -------------------------------------------------------------
 # PAGE 4: ARCHITECTURE
 # -------------------------------------------------------------
-elif page == "⚙️ Architecture":
+elif page == "âš™ï¸ Architecture":
     st.markdown(f"<h1 style='font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; color: var(--text-main); margin-bottom: 20px;'>System Architecture</h1>", unsafe_allow_html=True)
     st.markdown(f"""
     <div class="glass-panel" style="color: var(--text-main);">
