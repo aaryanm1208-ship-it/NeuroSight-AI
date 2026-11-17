@@ -533,12 +533,15 @@ st.markdown(f"""
 
         #MainMenu {{ visibility: hidden; display: none !important; }}
         footer {{ visibility: hidden; display: none !important; }}
-        header {{ visibility: hidden; height: 0 !important; }}
+        header, [data-testid="stHeader"] {{
+            background: transparent !important;
+            color: var(--text-main) !important;
+        }}
         div[data-testid="stDecoration"] {{ display: none !important; }}
-        div[data-testid="stToolbar"] {{ visibility: hidden; display: none !important; }}
+        div[data-testid="stToolbar"] {{ visibility: hidden; }}
 
         .block-container {{
-            padding-top: 1.5rem !important;
+            padding-top: 2rem !important;
             padding-bottom: 3rem !important;
             max-width: 1400px;
         }}
@@ -550,15 +553,29 @@ st.markdown(f"""
             transition: background-color 0.3s ease, color 0.3s ease;
         }}
 
-        [data-testid="collapsedControl"] {{
+        /* Ensure sidebar toggle controls are always visible and accessible */
+        [data-testid="collapsedControl"],
+        [data-testid="stSidebarCollapseButton"] {{
             visibility: visible !important;
-            top: 1.2rem !important;
-            left: 1.2rem !important;
-            z-index: 1000 !important;
+            display: flex !important;
+            z-index: 999999 !important;
+            color: var(--text-main) !important;
+        }}
+
+        [data-testid="collapsedControl"] {{
+            top: 1rem !important;
+            left: 1rem !important;
             background: var(--card-bg-solid) !important;
             border: 1px solid var(--card-border) !important;
             border-radius: 8px !important;
-            color: var(--text-main) !important;
+            padding: 4px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }}
+
+        [data-testid="collapsedControl"]:hover,
+        [data-testid="stSidebarCollapseButton"]:hover {{
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
         }}
 
         [data-testid="stSidebar"] {{
