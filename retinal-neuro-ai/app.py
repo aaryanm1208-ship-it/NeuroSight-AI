@@ -20,42 +20,26 @@ import io
 from pathlib import Path
 
 # ====================================================================
-# 0. PAGE CONFIGURATION & BASELINE SIDEBAR PINNING
+# 0. PAGE CONFIGURATION & APP INITIALIZATION
 # ====================================================================
 st.set_page_config(
-    page_title="NeuroSight AI | Clinical Diagnostic Suite",
+    page_title="NeuroSight AI | Retinal Health Screening",
     page_icon=":material/visibility:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
-    <style>
-        section[data-testid="stSidebar"] {
-            display: block !important;
-            visibility: visible !important;
-            width: 285px !important;
-            min-width: 285px !important;
-            transform: none !important;
-        }
-        section[data-testid="stSidebar"][aria-expanded="false"] {
-            display: block !important;
-            visibility: visible !important;
-            width: 285px !important;
-            min-width: 285px !important;
-            transform: none !important;
-            margin-left: 0 !important;
-        }
-        [data-testid="stSidebarNav"],
-        [data-testid="stSidebarContent"],
-        [data-testid="stSidebarUserContent"],
-        [data-testid="collapsedControl"],
-        [data-testid="stSidebarCollapseButton"] {
-            display: block !important;
-            visibility: visible !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
+# Session state initialization
+if 'active_sample_path' not in st.session_state:
+    st.session_state['active_sample_path'] = None
+if 'active_sample_name' not in st.session_state:
+    st.session_state['active_sample_name'] = None
+if 'report_data' not in st.session_state:
+    st.session_state['report_data'] = None
+if 'nav_view' not in st.session_state:
+    st.session_state['nav_view'] = "Diagnostics"
+if 'theme_mode' not in st.session_state:
+    st.session_state['theme_mode'] = "Light"
 
 # ====================================================================
 # 1. DEEP NEURAL NETWORK ARCHITECTURE (100% INTACT)
@@ -299,11 +283,11 @@ def generate_clinical_pdf(report_data):
         )
         styles = getSampleStyleSheet()
 
-        PRIMARY = colors.HexColor('#081226')
-        SECONDARY = colors.HexColor('#0284C7')
-        DARK_TEXT = colors.HexColor('#1E293B')
+        PRIMARY = colors.HexColor('#0F172A')
+        SECONDARY = colors.HexColor('#2563EB')
+        DARK_TEXT = colors.HexColor('#334155')
         LIGHT_BG = colors.HexColor('#F8FAFC')
-        BORDER_COL = colors.HexColor('#CBD5E1')
+        BORDER_COL = colors.HexColor('#E2E8F0')
         ALERT_BG = colors.HexColor('#FEF2F2')
         ALERT_BORDER = colors.HexColor('#EF4444')
         SAFE_BG = colors.HexColor('#ECFDF5')
@@ -317,8 +301,8 @@ def generate_clinical_pdf(report_data):
         table_cell = ParagraphStyle('TD', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
 
         elements = []
-        elements.append(Paragraph("NEUROSIGHT AI — CLINICAL RETINAL DIAGNOSTIC REPORT", title_style))
-        elements.append(Paragraph("FDA SaMD Class II Clinical Evaluation Protocol • Automated Microvascular Biomarker Phenotyping", sub_style))
+        elements.append(Paragraph("NEUROSIGHT AI - CLINICAL RETINAL DIAGNOSTIC REPORT", title_style))
+        elements.append(Paragraph("Automated Microvascular Biomarker Phenotyping & Neurological Risk Stratification", sub_style))
         elements.append(HRFlowable(width="100%", thickness=1.5, color=SECONDARY, spaceAfter=8))
 
         scan_id = report_data.get('scan_id', 'UNKNOWN')
@@ -342,12 +326,12 @@ def generate_clinical_pdf(report_data):
         elements.append(Spacer(1, 10))
 
         if pred == 1:
-            risk_title = f"ELEVATED NEUROLOGICAL & MICROVASCULAR RISK DETECTED — CONFIDENCE: {conf:.1f}%"
-            risk_desc = "Observed retinal alterations indicate significant vascular rarefaction, elevated vessel tortuosity, or degraded branching complexity. These microvascular patterns strongly correlate with early cerebral small vessel disease, stroke risk, or progressive neurodegenerative pathology."
+            risk_title = f"ELEVATED NEUROLOGICAL & MICROVASCULAR RISK DETECTED - CONFIDENCE: {conf:.1f}%"
+            risk_desc = "Observed retinal alterations indicate significant vascular rarefaction, elevated vessel tortuosity, or degraded branching complexity. These microvascular patterns correlate with subclinical microvascular remodeling, elevated stroke vulnerability, or progressive neurodegenerative pathology."
             bg_col = ALERT_BG
             border_col = ALERT_BORDER
         else:
-            risk_title = f"PHYSIOLOGICALLY NORMAL / LOW RISK VASCULAR PATTERN — CONFIDENCE: {conf:.1f}%"
+            risk_title = f"PHYSIOLOGICALLY NORMAL / LOW RISK VASCULAR PATTERN - CONFIDENCE: {conf:.1f}%"
             risk_desc = "Microvascular branching density, fractal index, and vessel curvature remain well within standard healthy normative baseline distributions."
             bg_col = SAFE_BG
             border_col = SAFE_BORDER
@@ -368,10 +352,10 @@ def generate_clinical_pdf(report_data):
         elements.append(Paragraph("Quantitative Microvascular Biomarkers", h1_style))
         bio_table = [
             [Paragraph("<b>Biomarker</b>", table_head), Paragraph("<b>Observed Value</b>", table_head), Paragraph("<b>Reference Range</b>", table_head), Paragraph("<b>Clinical Assessment</b>", table_head)],
-            [Paragraph("Vessel Density (VD)", table_cell), Paragraph(f"{marks.get('VD',0)*100:.2f}%", table_cell), Paragraph("10.0% – 17.5%", table_cell), Paragraph("Capillary bed perfusion across active field-of-view", table_cell)],
-            [Paragraph("Vessel Tortuosity (T)", table_cell), Paragraph(f"{marks.get('T',0):.2f}", table_cell), Paragraph("1.10 – 1.35", table_cell), Paragraph("Arc-chord ratio across segmented branch network", table_cell)],
-            [Paragraph("Fractal Dimension (FD)", table_cell), Paragraph(f"{marks.get('FD',0):.4f}", table_cell), Paragraph("1.40 – 1.70", table_cell), Paragraph("Multi-scale box-counting structural complexity", table_cell)],
-            [Paragraph("Average Vessel Width (VW)", table_cell), Paragraph(f"{marks.get('VW',0):.2f} px", table_cell), Paragraph("2.0 – 4.5 px", table_cell), Paragraph("Medial axis distance transform vessel caliber", table_cell)],
+            [Paragraph("Vessel Density (VD)", table_cell), Paragraph(f"{marks.get('VD',0)*100:.2f}%", table_cell), Paragraph("10.0% - 17.5%", table_cell), Paragraph("Capillary bed perfusion across active field-of-view", table_cell)],
+            [Paragraph("Vessel Tortuosity (T)", table_cell), Paragraph(f"{marks.get('T',0):.2f}", table_cell), Paragraph("1.10 - 1.35", table_cell), Paragraph("Arc-chord ratio across segmented branch network", table_cell)],
+            [Paragraph("Fractal Dimension (FD)", table_cell), Paragraph(f"{marks.get('FD',0):.4f}", table_cell), Paragraph("1.40 - 1.70", table_cell), Paragraph("Multi-scale box-counting structural complexity", table_cell)],
+            [Paragraph("Average Vessel Width (VW)", table_cell), Paragraph(f"{marks.get('VW',0):.2f} px", table_cell), Paragraph("2.0 - 4.5 px", table_cell), Paragraph("Medial axis distance transform vessel caliber", table_cell)],
         ]
         t_bio = Table(bio_table, colWidths=[120, 90, 100, 230])
         t_bio.setStyle(TableStyle([
@@ -383,7 +367,7 @@ def generate_clinical_pdf(report_data):
         elements.append(Spacer(1, 12))
 
         elements.append(Paragraph("Regulatory Disclaimer & Clinical Intent", h1_style))
-        elements.append(Paragraph("This automated diagnostic record is generated by NeuroSight AI v2.4 as a Clinical Decision Support (CDS) tool under FDA SaMD Class II architectural guidelines. It does not replace definitive clinical evaluation and must be interpreted by a certified physician or ophthalmologist in conjunction with comprehensive clinical history.", body_style))
+        elements.append(Paragraph("This automated diagnostic record is generated by NeuroSight AI as a Clinical Decision Support (CDS) evaluation tool. It does not replace definitive clinical examination and must be reviewed by a certified healthcare professional in conjunction with comprehensive clinical history.", body_style))
 
         doc.build(elements)
         return buf.getvalue()
@@ -420,158 +404,82 @@ def get_sample_scans():
 available_samples = get_sample_scans()
 
 # ====================================================================
-# 7. EXECUTIVE SIDEBAR & THEME SYSTEM
+# 7. DESIGN SYSTEM & CSS (APPLE HEALTH / ZOCDOC / SAAS AESTHETIC)
 # ====================================================================
-with st.sidebar:
-    st.markdown("""
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35); flex-shrink: 0;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M3 12h2m14 0h2M12 3v2m0 14v2"></path>
-                    <circle cx="12" cy="12" r="8" stroke-dasharray="2 3"></circle>
-                </svg>
-            </div>
-            <div>
-                <div style="font-size: 1.22rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; color: var(--sidebar-text);">
-                    NeuroSight <span style="color: var(--accent);">AI</span>
-                </div>
-                <div style="font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-muted); letter-spacing: 0.5px; margin-top: 3px;">
-                    CLINICAL DIAGNOSTICS
-                </div>
-            </div>
-        </div>
-        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 9999px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.68rem; font-weight: 600; color: #10B981; margin-bottom: 22px;">
-            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
-            v2.4 • Clinical Research Build
-        </div>
-    """, unsafe_allow_html=True)
+# Default to Light Mode unless toggled
+is_dark = st.session_state.get('theme_mode') == "Dark"
 
-    st.markdown("<div class='sidebar-group-title'>INTERFACE THEME</div>", unsafe_allow_html=True)
-    theme = st.radio(
-        "Theme",
-        options=[
-            ":material/dark_mode: Obsidian Pro",
-            ":material/light_mode: Clinical Pure"
-        ],
-        index=0,
-        label_visibility="collapsed"
-    )
-
-    st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='sidebar-group-title'>CLINICAL WORKSPACE</div>", unsafe_allow_html=True)
-    page = st.radio(
-        "Workspace",
-        options=[
-            ":material/biotech: Diagnostic Console",
-            ":material/clinical_notes: Patient Explanation",
-            ":material/picture_as_pdf: Export Reports",
-            ":material/hub: Architecture"
-        ],
-        index=0,
-        label_visibility="collapsed"
-    )
-
-    st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
-    
-    # Telemetry card
-    dev_name = "CUDA (Accelerated)" if device.type == "cuda" else "CPU (Standard)"
-    st.markdown(f"""
-        <div class="telemetry-card">
-            <div class="telemetry-header">
-                <span class="telemetry-pulse"></span>
-                <span>SYSTEM TELEMETRY</span>
-            </div>
-            <div class="telemetry-row">
-                <span class="telemetry-label">U-Net Segmenter:</span>
-                <span class="telemetry-pill telemetry-ready">Ready</span>
-            </div>
-            <div class="telemetry-row">
-                <span class="telemetry-label">ResNet50 + XGB:</span>
-                <span class="telemetry-pill telemetry-active">Active</span>
-            </div>
-            <div class="telemetry-row">
-                <span class="telemetry-label">Compute Device:</span>
-                <span class="telemetry-pill telemetry-info">{dev_name}</span>
-            </div>
-            <div class="telemetry-row">
-                <span class="telemetry-label">Protocol Mode:</span>
-                <span class="telemetry-pill telemetry-secure">HIPAA / Safe</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-# Determine active theme colors (WCAG AAA High Contrast)
-is_dark = "Obsidian" in theme or "Midnight" in theme
 if is_dark:
     theme_vars = """
-        --bg-color: #0B0F19;
-        --card-bg: #131A2A;
-        --card-bg-elevated: #1A2236;
-        --card-border: rgba(56, 189, 248, 0.16);
-        --card-border-hover: rgba(56, 189, 248, 0.4);
-        --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        --bg-color: #0B1120;
+        --card-bg: #131C31;
+        --card-bg-elevated: #1A243D;
+        --card-border: rgba(59, 130, 246, 0.16);
+        --card-border-hover: rgba(59, 130, 246, 0.38);
+        --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        --card-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.48);
         --text-main: #F8FAFC;
         --text-sub: #94A3B8;
         --text-muted: #64748B;
-        --accent: #38BDF8;
-        --accent-hover: #0EA5E9;
-        --accent-subtle: rgba(56, 189, 248, 0.12);
-        --accent-glow: rgba(56, 189, 248, 0.2);
+        --accent: #3B82F6;
+        --accent-hover: #60A5FA;
+        --accent-subtle: rgba(59, 130, 246, 0.12);
+        --accent-tint: rgba(59, 130, 246, 0.22);
         --emerald: #10B981;
-        --emerald-bg: rgba(16, 185, 129, 0.14);
-        --emerald-border: rgba(16, 185, 129, 0.4);
+        --emerald-bg: rgba(16, 185, 129, 0.12);
+        --emerald-border: rgba(16, 185, 129, 0.32);
         --emerald-text: #6EE7B7;
-        --crimson: #EF4444;
-        --crimson-bg: rgba(239, 68, 68, 0.14);
-        --crimson-border: rgba(239, 68, 68, 0.4);
-        --crimson-text: #FCA5A5;
+        --coral: #EF4444;
+        --coral-bg: rgba(239, 68, 68, 0.12);
+        --coral-border: rgba(239, 68, 68, 0.32);
+        --coral-text: #FCA5A5;
         --sidebar-bg: #0C121E;
         --sidebar-text: #F8FAFC;
-        --sidebar-border: rgba(56, 189, 248, 0.16);
-        --sidebar-active-bg: rgba(56, 189, 248, 0.14);
-        --btn-sec-bg: #1A2236;
+        --sidebar-border: rgba(59, 130, 246, 0.16);
+        --sidebar-active-bg: rgba(59, 130, 246, 0.14);
+        --btn-sec-bg: #1A243D;
         --btn-sec-text: #F8FAFC;
-        --btn-sec-border: rgba(56, 189, 248, 0.25);
-        --uploader-bg: rgba(19, 26, 42, 0.65);
-        --uploader-border: rgba(56, 189, 248, 0.3);
-        --table-head-bg: #1A2236;
+        --btn-sec-border: rgba(59, 130, 246, 0.25);
+        --uploader-bg: rgba(19, 28, 49, 0.7);
+        --uploader-border: rgba(59, 130, 246, 0.3);
+        --table-head-bg: #1A243D;
         --table-alt: rgba(255, 255, 255, 0.02);
     """
     plot_template = "plotly_dark"
 else:
-    # High-contrast surgical white & slate Light Mode
+    # High-trust Apple Health / Zocdoc Light Mode
     theme_vars = """
-        --bg-color: #F4F7FB;
+        --bg-color: #F5F8FC;
         --card-bg: #FFFFFF;
         --card-bg-elevated: #F8FAFC;
-        --card-border: #E2E8F0;
-        --card-border-hover: #CBD5E1;
-        --card-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+        --card-border: rgba(226, 232, 240, 0.8);
+        --card-border-hover: rgba(148, 163, 184, 0.5);
+        --card-shadow: 0 10px 30px rgba(37, 99, 235, 0.05);
+        --card-shadow-hover: 0 14px 34px rgba(37, 99, 235, 0.09);
         --text-main: #0F172A;
         --text-sub: #475569;
         --text-muted: #64748B;
-        --accent: #0284C7;
-        --accent-hover: #0369A1;
-        --accent-subtle: rgba(2, 132, 199, 0.08);
-        --accent-glow: rgba(2, 132, 199, 0.15);
+        --accent: #2563EB;
+        --accent-hover: #1D4ED8;
+        --accent-subtle: #EFF6FF;
+        --accent-tint: #DBEAFE;
         --emerald: #059669;
         --emerald-bg: #ECFDF5;
         --emerald-border: #A7F3D0;
         --emerald-text: #065F46;
-        --crimson: #DC2626;
-        --crimson-bg: #FEF2F2;
-        --crimson-border: #FCA5A5;
-        --crimson-text: #991B1B;
+        --coral: #DC2626;
+        --coral-bg: #FEF2F2;
+        --coral-border: #FCA5A5;
+        --coral-text: #991B1B;
         --sidebar-bg: #FFFFFF;
         --sidebar-text: #0F172A;
         --sidebar-border: #E2E8F0;
-        --sidebar-active-bg: rgba(2, 132, 199, 0.08);
+        --sidebar-active-bg: #EFF6FF;
         --btn-sec-bg: #FFFFFF;
         --btn-sec-text: #0F172A;
         --btn-sec-border: #CBD5E1;
         --uploader-bg: #F8FAFC;
-        --uploader-border: #94A3B8;
+        --uploader-border: #CBD5E1;
         --table-head-bg: #F1F5F9;
         --table-alt: #F8FAFC;
     """
@@ -579,7 +487,7 @@ else:
 
 st.markdown(f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         :root {{
             --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -587,6 +495,7 @@ st.markdown(f"""
             {theme_vars}
         }}
 
+        /* Clutter Removal */
         #MainMenu {{ visibility: hidden; display: none !important; }}
         footer {{ visibility: hidden; display: none !important; }}
         header, [data-testid="stHeader"] {{
@@ -598,93 +507,78 @@ st.markdown(f"""
         div[data-testid="stDecoration"] {{ display: none !important; }}
         div[data-testid="stToolbar"] {{ display: none !important; }}
 
+        /* Canvas & Container */
         .block-container {{
-            padding-top: 1.2rem !important;
+            padding-top: 1rem !important;
             padding-bottom: 3rem !important;
-            max-width: 1400px;
+            max-width: 1380px;
         }}
 
         .stApp {{
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: var(--font-sans);
-            transition: background-color 0.25s ease, color 0.25s ease;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }}
 
-        /* Force Sidebar Visible & Pinned Open */
-        section[data-testid="stSidebar"] {{
-            display: block !important;
-            visibility: visible !important;
-            width: 285px !important;
-            min-width: 285px !important;
-            transform: none !important;
-            background-color: var(--sidebar-bg) !important;
-            border-right: 1px solid var(--sidebar-border) !important;
+        /* Responsive Sidebar: Pinned on Desktop, Smooth Overlay on Mobile */
+        @media (min-width: 769px) {{
+            section[data-testid="stSidebar"] {{
+                display: block !important;
+                visibility: visible !important;
+                width: 285px !important;
+                min-width: 285px !important;
+                transform: none !important;
+                background-color: var(--sidebar-bg) !important;
+                border-right: 1px solid var(--sidebar-border) !important;
+            }}
+            section[data-testid="stSidebar"][aria-expanded="false"] {{
+                display: block !important;
+                visibility: visible !important;
+                width: 285px !important;
+                min-width: 285px !important;
+                transform: none !important;
+                margin-left: 0 !important;
+            }}
         }}
 
-        section[data-testid="stSidebar"][aria-expanded="false"] {{
-            display: block !important;
-            visibility: visible !important;
-            width: 285px !important;
-            min-width: 285px !important;
-            transform: none !important;
-            margin-left: 0 !important;
+        @media (max-width: 768px) {{
+            section[data-testid="stSidebar"] {{
+                width: 100% !important;
+                min-width: 0 !important;
+                background-color: var(--sidebar-bg) !important;
+            }}
+            .block-container {{
+                padding-top: 0.75rem !important;
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }}
         }}
 
-        [data-testid="stSidebar"],
         [data-testid="stSidebarNav"],
         [data-testid="stSidebarContent"],
         [data-testid="stSidebarUserContent"] {{
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }}
-
-        /* Ensure sidebar toggle controls are always visible and accessible */
-        [data-testid="collapsedControl"],
-        [data-testid="stSidebarCollapseButton"] {{
-            visibility: visible !important;
-            display: flex !important;
-            z-index: 999999 !important;
+            background-color: var(--sidebar-bg) !important;
             color: var(--sidebar-text) !important;
         }}
 
-        [data-testid="collapsedControl"] {{
-            top: 1rem !important;
-            left: 1rem !important;
-            background: var(--card-bg) !important;
-            border: 1px solid var(--card-border) !important;
-            border-radius: 8px !important;
-            padding: 4px !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        /* Hide ugly native radio circles */
+        [role="radiogroup"] label > div:first-child,
+        input[type="radio"] {{
+            display: none !important;
         }}
 
-        [data-testid="collapsedControl"]:hover,
-        [data-testid="stSidebarCollapseButton"]:hover {{
-            border-color: var(--accent) !important;
-            color: var(--accent) !important;
-        }}
-
-        .sidebar-group-title {{
-            font-size: 0.68rem;
-            font-family: var(--font-mono);
-            font-weight: 700;
-            color: var(--text-muted);
-            letter-spacing: 0.8px;
-            margin-bottom: 8px;
-        }}
-
-        /* Modern SaaS Pill Menu for Sidebar Radios */
+        /* Sidebar Navigation Items */
         [data-testid="stSidebar"] [role="radiogroup"] {{
-            gap: 5px;
+            gap: 6px;
             display: flex;
             flex-direction: column;
         }}
         [data-testid="stSidebar"] [role="radiogroup"] label {{
             background: transparent;
             border: 1px solid transparent;
-            border-radius: 10px;
-            padding: 9px 12px !important;
+            border-radius: 12px;
+            padding: 10px 14px !important;
             margin: 0 !important;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -693,21 +587,17 @@ st.markdown(f"""
         }}
         [data-testid="stSidebar"] [role="radiogroup"] label:hover {{
             background: var(--card-bg-elevated) !important;
-            border-color: var(--card-border) !important;
         }}
         [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
             background: var(--sidebar-active-bg) !important;
             border-color: var(--accent) !important;
             border-left: 4px solid var(--accent) !important;
         }}
-        [data-testid="stSidebar"] [role="radiogroup"] label > div:first-child {{
-            display: none !important; /* Hide ugly Streamlit radio circle */
-        }}
         [data-testid="stSidebar"] [role="radiogroup"] label p,
         [data-testid="stSidebar"] [role="radiogroup"] label span,
         [data-testid="stSidebar"] [role="radiogroup"] label div {{
             color: var(--sidebar-text) !important;
-            font-size: 0.86rem !important;
+            font-size: 0.88rem !important;
             font-weight: 500 !important;
             margin: 0 !important;
         }}
@@ -717,106 +607,71 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* Top SaaS Application Navbar */
-        .saas-navbar {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 20px;
+        /* Modern Segmented Control Pills */
+        [data-testid="stSegmentedControl"] {{
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 14px;
-            margin-bottom: 22px;
-            box-shadow: var(--card-shadow);
-        }}
-        .navbar-left {{
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
             display: flex;
-            align-items: center;
-            gap: 12px;
+            width: 100%;
         }}
-        .brand-badge-icon {{
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
-            flex-shrink: 0;
+        [data-testid="stSegmentedControl"] button {{
+            border-radius: 10px !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            color: var(--text-sub) !important;
+            border: none !important;
+            padding: 7px 14px !important;
+            transition: all 0.2s ease !important;
         }}
-        .brand-text-group {{
-            display: flex;
-            flex-direction: column;
+        [data-testid="stSegmentedControl"] button:hover {{
+            color: var(--text-main) !important;
+            background: var(--accent-subtle) !important;
         }}
-        .brand-title {{
-            font-size: 1.15rem;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-            line-height: 1.1;
-            color: var(--text-main);
-        }}
-        .brand-ai {{
-            color: var(--accent);
-        }}
-        .brand-subtitle {{
-            font-size: 0.72rem;
-            font-family: var(--font-mono);
-            color: var(--text-muted);
-            letter-spacing: 0.3px;
-            margin-top: 2px;
-        }}
-        .navbar-right {{
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }}
-        .status-pill-saas {{
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 11px;
-            border-radius: 9999px;
-            background: var(--card-bg-elevated);
-            border: 1px solid var(--card-border);
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: var(--text-sub);
-        }}
-        .status-pulse-dot {{
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #10B981;
-            box-shadow: 0 0 8px #10B981;
-            display: inline-block;
-        }}
-        .active-scan-badge {{
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 11px;
-            border-radius: 9999px;
-            background: var(--accent-subtle);
-            border: 1px solid var(--card-border-hover);
-            font-family: var(--font-mono);
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--accent);
+        [data-testid="stSegmentedControl"] button[aria-selected="true"] {{
+            background: var(--accent) !important;
+            color: #FFFFFF !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
         }}
 
-        /* Buttons & Actions Styling */
+        /* Top Application Navbar */
+        .app-navbar-container {{
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 12px 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--card-shadow);
+        }}
+
+        /* Clean High-Trust Cards */
+        .health-card {{
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.25s ease;
+        }}
+        .health-card:hover {{
+            box-shadow: var(--card-shadow-hover);
+        }}
+
+        /* Buttons & Actions */
         div.stButton > button,
         [data-testid="stBaseButton-secondary"] {{
             background-color: var(--btn-sec-bg) !important;
             color: var(--btn-sec-text) !important;
             border: 1px solid var(--btn-sec-border) !important;
-            border-radius: 10px !important;
+            border-radius: 12px !important;
             font-weight: 600 !important;
             font-size: 0.88rem !important;
-            padding: 8px 16px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            padding: 9px 18px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
             transition: all 0.2s ease !important;
         }}
         div.stButton > button:hover,
@@ -827,39 +682,46 @@ st.markdown(f"""
             transform: translateY(-1px) !important;
         }}
 
-        /* Download Primary Button */
+        /* Primary Action Download Button */
         div.stDownloadButton > button {{
-            border-radius: 10px !important;
+            border-radius: 14px !important;
             font-weight: 600 !important;
-            font-size: 0.92rem !important;
-            background: linear-gradient(135deg, #0EA5E9, #0284C7) !important;
+            font-size: 0.94rem !important;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
             color: #FFFFFF !important;
             border: none !important;
-            padding: 12px 24px !important;
-            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3) !important;
+            padding: 13px 26px !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28) !important;
+            transition: all 0.2s ease !important;
         }}
         div.stDownloadButton > button:hover {{
-            box-shadow: 0 8px 24px rgba(14, 165, 233, 0.45) !important;
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.38) !important;
             transform: translateY(-1px) !important;
         }}
 
-        /* File Uploader Strict Light/Dark Overrides */
+        /* Clean File Uploader Styling (NO dashed black boxes) */
         [data-testid="stFileUploader"] {{
             background: transparent !important;
         }}
         [data-testid="stFileUploaderDropzone"] {{
             background-color: var(--uploader-bg) !important;
-            border: 2px dashed var(--uploader-border) !important;
-            border-radius: 12px !important;
+            border: 1.5px solid var(--uploader-border) !important;
+            border-radius: 16px !important;
             color: var(--text-main) !important;
+            padding: 24px 20px !important;
+            transition: all 0.2s ease;
         }}
         [data-testid="stFileUploaderDropzone"]:hover {{
             border-color: var(--accent) !important;
+            background-color: var(--card-bg-elevated) !important;
         }}
         [data-testid="stFileUploaderDropzone"] [data-testid="stBaseButton-secondary"] {{
-            background-color: var(--card-bg) !important;
-            color: var(--text-main) !important;
-            border: 1px solid var(--card-border) !important;
+            background-color: var(--accent) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2) !important;
         }}
         [data-testid="stFileUploaderDropzone"] * {{
             color: var(--text-main) !important;
@@ -869,78 +731,116 @@ st.markdown(f"""
             stroke: var(--accent) !important;
         }}
 
-        /* Expander Styling */
-        div[data-testid="stExpander"] {{
-            background: var(--card-bg) !important;
-            border: 1px solid var(--card-border) !important;
-            border-radius: 12px !important;
-            box-shadow: var(--card-shadow) !important;
-            margin-bottom: 20px !important;
+        /* Hero Takeaway Banner */
+        .summary-hero-card {{
+            border-radius: 20px;
+            padding: 22px 26px;
+            margin-bottom: 22px;
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s ease;
         }}
-        div[data-testid="stExpander"] summary {{
-            color: var(--text-main) !important;
-            font-weight: 600 !important;
-            font-size: 0.88rem !important;
+        .summary-hero-normal {{
+            background: var(--emerald-bg);
+            border: 1px solid var(--emerald-border);
         }}
-        div[data-testid="stExpander"] summary svg {{
-            color: var(--accent) !important;
+        .summary-hero-elevated {{
+            background: var(--coral-bg);
+            border: 1px solid var(--coral-border);
+        }}
+        .summary-hero-icon {{
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }}
+        .summary-hero-normal .summary-hero-icon {{
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--emerald);
+        }}
+        .summary-hero-elevated .summary-hero-icon {{
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--coral);
+        }}
+        .summary-hero-title {{
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }}
+        .summary-hero-normal .summary-hero-title {{
+            color: var(--emerald-text);
+        }}
+        .summary-hero-elevated .summary-hero-title {{
+            color: var(--coral-text);
+        }}
+        .summary-hero-desc {{
+            font-size: 0.92rem;
+            line-height: 1.55;
+            color: var(--text-main);
         }}
 
-        /* 4-Column Hero Bento Grid Cards */
-        .bento-grid-card {{
+        /* Bento Grid 4-Column Metric Cards */
+        .bento-metric-card {{
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 18px 20px;
+            border-radius: 20px;
+            padding: 20px;
             box-shadow: var(--card-shadow);
-            transition: all 0.25s ease;
+            transition: all 0.2s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 128px;
+            min-height: 140px;
         }}
-        .bento-grid-card:hover {{
-            border-color: var(--card-border-hover);
+        .bento-metric-card:hover {{
+            box-shadow: var(--card-shadow-hover);
             transform: translateY(-2px);
         }}
-        .bento-label {{
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .bento-header {{
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }}
+        .bento-title {{
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            letter-spacing: 0.2px;
+        }}
+        .bento-icon-badge {{
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--accent-subtle);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }}
         .bento-val {{
-            font-family: var(--font-mono);
             font-size: 1.85rem;
             font-weight: 800;
-            letter-spacing: -0.5px;
             line-height: 1.1;
-            margin: 6px 0;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
         }}
         .bento-sub {{
-            font-size: 0.74rem;
-            color: var(--text-sub);
-        }}
-        .metric-range-pill {{
-            font-family: var(--font-mono);
-            font-size: 0.66rem;
-            padding: 2px 7px;
-            border-radius: 6px;
-            background: var(--card-bg-elevated);
-            border: 1px solid var(--card-border);
-            color: var(--text-sub);
-            font-weight: 600;
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            line-height: 1.35;
         }}
         .mini-progress-track {{
             width: 100%;
-            height: 5px;
-            background: var(--card-bg-elevated);
+            height: 6px;
             border-radius: 9999px;
+            background: var(--card-bg-elevated);
+            border: 1px solid var(--card-border);
             overflow: hidden;
             margin-top: 6px;
         }}
@@ -950,342 +850,136 @@ st.markdown(f"""
             transition: width 0.4s ease;
         }}
 
-        /* Clinical Risk Banners - High Contrast */
-        .clinical-alert-elevated {{
-            background-color: var(--crimson-bg) !important;
-            border: 1px solid var(--crimson-border) !important;
-            border-radius: 14px;
-            padding: 20px 24px;
-            margin-bottom: 20px;
-        }}
-        .clinical-alert-elevated .alert-title {{
-            color: var(--crimson-text) !important;
-            font-size: 1.15rem;
-            font-weight: 800;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        .clinical-alert-elevated .alert-body {{
-            color: var(--crimson-text) !important;
-            font-size: 0.88rem;
-            line-height: 1.55;
-            opacity: 0.95;
-        }}
-
-        .clinical-alert-normal {{
-            background-color: var(--emerald-bg) !important;
-            border: 1px solid var(--emerald-border) !important;
-            border-radius: 14px;
-            padding: 20px 24px;
-            margin-bottom: 20px;
-        }}
-        .clinical-alert-normal .alert-title {{
-            color: var(--emerald-text) !important;
-            font-size: 1.15rem;
-            font-weight: 800;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        .clinical-alert-normal .alert-body {{
-            color: var(--emerald-text) !important;
-            font-size: 0.88rem;
-            line-height: 1.55;
-            opacity: 0.95;
-        }}
-
-        /* Medical Imaging Lightbox Viewports */
-        .medical-viewport-card {{
+        /* Medical Imaging Viewports with Dark Contrast Backing */
+        .viewport-container {{
             background: #090D16;
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            transition: border-color 0.2s ease;
+            border-radius: 18px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 14px;
         }}
-        .medical-viewport-card:hover {{
-            border-color: var(--accent);
-        }}
-        .viewport-hud {{
+        .viewport-header {{
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 12px;
-            background: rgba(17, 24, 39, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94A3B8;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            padding: 0 4px;
+        }}
+        .viewport-badge {{
+            color: #38BDF8;
+            background: rgba(56, 189, 248, 0.12);
+            padding: 2px 8px;
+            border-radius: 6px;
             font-family: var(--font-mono);
             font-size: 0.68rem;
-            color: #94A3B8;
-        }}
-        .viewport-hud-title {{
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 700;
-            color: #F8FAFC;
-        }}
-        .viewport-hud-dot {{
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--accent);
-        }}
-        .viewport-meta {{
-            padding: 7px 12px;
-            background: rgba(17, 24, 39, 0.95);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            font-family: var(--font-mono);
-            font-size: 0.66rem;
-            color: #64748B;
-            display: flex;
-            justify-content: space-between;
         }}
 
-        /* Table Styling */
+        /* Clinical Table */
         .clinical-table-container {{
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-radius: 14px;
+            border-radius: 18px;
             overflow: hidden;
-            margin-top: 14px;
-            margin-bottom: 20px;
             box-shadow: var(--card-shadow);
+            margin-bottom: 22px;
         }}
         .clinical-table {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.83rem;
+            text-align: left;
         }}
         .clinical-table th {{
             background: var(--table-head-bg);
-            color: var(--text-main);
-            font-family: var(--font-mono);
-            font-size: 0.72rem;
+            color: var(--text-sub);
+            font-size: 0.75rem;
             font-weight: 700;
-            text-align: left;
-            padding: 12px 16px;
+            padding: 14px 18px;
             border-bottom: 1px solid var(--card-border);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }}
         .clinical-table td {{
-            padding: 12px 16px;
+            padding: 14px 18px;
             border-bottom: 1px solid var(--card-border);
-            color: var(--text-sub);
+            font-size: 0.86rem;
+            color: var(--text-main);
         }}
         .clinical-table tr:last-child td {{
             border-bottom: none;
         }}
         .clinical-table tr:hover td {{
-            background: var(--table-alt);
+            background: var(--card-bg-elevated);
         }}
 
-        .status-pill-ok {{
-            display: inline-block;
-            padding: 2px 8px;
+        /* Status Pills */
+        .pill-status {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
             border-radius: 9999px;
-            font-family: var(--font-mono);
-            font-size: 0.68rem;
+            font-size: 0.72rem;
             font-weight: 700;
+            letter-spacing: 0.3px;
+        }}
+        .pill-normal {{
             background: var(--emerald-bg);
             color: var(--emerald-text);
             border: 1px solid var(--emerald-border);
         }}
-        .status-pill-alert {{
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 9999px;
-            font-family: var(--font-mono);
-            font-size: 0.68rem;
-            font-weight: 700;
-            background: var(--crimson-bg);
-            color: var(--crimson-text);
-            border: 1px solid var(--crimson-border);
+        .pill-elevated {{
+            background: var(--coral-bg);
+            color: var(--coral-text);
+            border: 1px solid var(--coral-border);
         }}
 
-        /* Telemetry Card in Sidebar */
+        /* Telemetry Status Card in Sidebar */
         .telemetry-card {{
             background: var(--card-bg-elevated);
             border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 14px;
+            border-radius: 16px;
+            padding: 16px;
         }}
         .telemetry-header {{
             display: flex;
             align-items: center;
             gap: 8px;
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: var(--text-muted);
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }}
-        .telemetry-pulse {{
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #10B981;
-            box-shadow: 0 0 8px #10B981;
-            display: inline-block;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--card-border);
         }}
         .telemetry-row {{
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 7px;
-            font-size: 0.72rem;
+            font-size: 0.78rem;
+            margin-bottom: 8px;
         }}
         .telemetry-label {{
             color: var(--text-sub);
         }}
         .telemetry-pill {{
-            font-family: var(--font-mono);
-            font-size: 0.66rem;
-            padding: 1px 7px;
-            border-radius: 6px;
-            font-weight: 600;
-        }}
-        .telemetry-ready {{ background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); }}
-        .telemetry-active {{ background: rgba(14, 165, 233, 0.15); color: #0EA5E9; border: 1px solid rgba(14, 165, 233, 0.3); }}
-        .telemetry-info {{ background: var(--card-bg); color: var(--text-sub); border: 1px solid var(--card-border); }}
-        .telemetry-secure {{ background: rgba(99, 102, 241, 0.15); color: #818CF8; border: 1px solid rgba(99, 102, 241, 0.3); }}
-
-        /* Hero Dropzone Card */
-        .upload-dropzone-hero {{
-            border: 2px dashed var(--uploader-border);
-            background: var(--card-bg);
-            border-radius: 18px;
-            padding: 36px 28px;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: var(--card-shadow);
-        }}
-        .upload-dropzone-hero:hover {{
-            border-color: var(--accent);
-            box-shadow: 0 12px 36px -8px var(--accent-glow);
-        }}
-        .dropzone-title {{
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: var(--text-main);
-            letter-spacing: -0.4px;
-            margin-bottom: 6px;
-        }}
-        .dropzone-subtitle {{
-            font-size: 0.88rem;
-            color: var(--text-sub);
-            max-width: 520px;
-            margin: 0 auto 16px auto;
-            line-height: 1.45;
-        }}
-        .dropzone-specs {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }}
-        .spec-tag {{
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 6px;
-            background: var(--card-bg-elevated);
-            border: 1px solid var(--card-border);
-            color: var(--text-sub);
-        }}
-
-        /* Pipeline Card */
-        .pipeline-card {{
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 18px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100%;
-            box-shadow: var(--card-shadow);
-        }}
-        .pipeline-header {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 18px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--card-border);
-        }}
-        .pipeline-title {{
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }}
-        .pipeline-badge {{
-            font-family: var(--font-mono);
-            font-size: 0.68rem;
             padding: 2px 8px;
             border-radius: 9999px;
-            background: var(--accent-subtle);
-            color: var(--accent);
-            border: 1px solid var(--card-border-hover);
+            font-size: 0.7rem;
             font-weight: 600;
         }}
-        .step-item {{
-            display: flex;
-            gap: 14px;
-            align-items: flex-start;
+        .telemetry-ready {{
+            background: var(--emerald-bg);
+            color: var(--emerald-text);
         }}
-        .step-num {{
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: var(--card-bg-elevated);
-            border: 1px solid var(--card-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            font-weight: 700;
+        .telemetry-info {{
+            background: var(--accent-subtle);
             color: var(--accent);
-            flex-shrink: 0;
-        }}
-        .step-content {{
-            flex: 1;
-        }}
-        .step-heading {{
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 2px;
-        }}
-        .step-desc {{
-            font-size: 0.74rem;
-            color: var(--text-sub);
-            line-height: 1.4;
-        }}
-        .step-connector {{
-            width: 2px;
-            height: 16px;
-            background: var(--card-border);
-            margin-left: 15px;
-            margin-top: 4px;
-            margin-bottom: 4px;
-        }}
-        .pipeline-footer {{
-            margin-top: 18px;
-            padding-top: 12px;
-            border-top: 1px solid var(--card-border);
-            font-family: var(--font-mono);
-            font-size: 0.68rem;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -1296,20 +990,164 @@ if not models_ready:
     st.stop()
 
 # ====================================================================
-# 8. ROUTING & PAGE HANDLERS
+# 8. TOP RESPONSIVE NAVBAR (APPLE HEALTH / ZOCDOC APPLICATION SHELL)
+# ====================================================================
+with st.container():
+    st.markdown('<div class="app-navbar-container">', unsafe_allow_html=True)
+    nb_col1, nb_col2, nb_col3 = st.columns([32, 48, 20], vertical_alignment="center")
+
+    with nb_col1:
+        st.markdown("""
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25); flex-shrink: 0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M3 12h2m14 0h2M12 3v2m0 14v2"></path>
+                        <circle cx="12" cy="12" r="8" stroke-dasharray="2 3"></circle>
+                    </svg>
+                </div>
+                <div>
+                    <div style="font-size: 1.18rem; font-weight: 800; letter-spacing: -0.4px; line-height: 1.1; color: var(--text-main);">
+                        NeuroSight <span style="color: var(--accent);">AI</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500; margin-top: 2px;">
+                        Retinal Neurological Screening
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with nb_col2:
+        nav_choice = st.segmented_control(
+            "Navigation",
+            options=["Diagnostics", "Patient Guide", "PDF Report", "How It Works"],
+            default=st.session_state.get('nav_view', "Diagnostics"),
+            selection_mode="single",
+            required=True,
+            key="top_nav_bar",
+            label_visibility="collapsed"
+        )
+        if nav_choice != st.session_state.get('nav_view'):
+            st.session_state['nav_view'] = nav_choice
+            st.rerun()
+
+    with nb_col3:
+        theme_toggle = st.segmented_control(
+            "Theme Mode",
+            options=[":material/light_mode: Light", ":material/dark_mode: Dark"],
+            default=":material/dark_mode: Dark" if is_dark else ":material/light_mode: Light",
+            selection_mode="single",
+            required=True,
+            key="top_theme_bar",
+            label_visibility="collapsed"
+        )
+        new_theme = "Dark" if "Dark" in theme_toggle else "Light"
+        if new_theme != st.session_state.get('theme_mode'):
+            st.session_state['theme_mode'] = new_theme
+            st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+active_page = st.session_state.get('nav_view', "Diagnostics")
+
+# ====================================================================
+# 9. EXECUTIVE SIDEBAR (TELEMETRY & CLINICAL STATUS)
+# ====================================================================
+with st.sidebar:
+    st.markdown("""
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22); flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M3 12h2m14 0h2M12 3v2m0 14v2"></path>
+                    <circle cx="12" cy="12" r="8" stroke-dasharray="2 3"></circle>
+                </svg>
+            </div>
+            <div>
+                <div style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.4px; line-height: 1.1; color: var(--sidebar-text);">
+                    NeuroSight <span style="color: var(--accent);">AI</span>
+                </div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 500;">
+                    v2.4 • Clinical Health
+                </div>
+            </div>
+        </div>
+        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 9999px; background: var(--emerald-bg); border: 1px solid var(--emerald-border); font-size: 0.68rem; font-weight: 600; color: var(--emerald-text); margin-bottom: 20px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+            HIPAA De-Identified Session
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Sidebar Navigation
+    st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;'>Clinical Views</div>", unsafe_allow_html=True)
+    sb_page = st.radio(
+        "Sidebar Navigation",
+        options=[
+            ":material/biotech: Diagnostics",
+            ":material/health_and_safety: Patient Guide",
+            ":material/picture_as_pdf: PDF Report",
+            ":material/hub: How It Works"
+        ],
+        index=["Diagnostics", "Patient Guide", "PDF Report", "How It Works"].index(active_page) if active_page in ["Diagnostics", "Patient Guide", "PDF Report", "How It Works"] else 0,
+        label_visibility="collapsed"
+    )
+    # Sync with top navigation
+    cleaned_sb_page = sb_page.split(": ")[-1].strip()
+    if cleaned_sb_page != active_page:
+        st.session_state['nav_view'] = cleaned_sb_page
+        st.rerun()
+
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+
+    # Active Scan status in sidebar if present
+    if st.session_state.get('active_sample_name'):
+        st.markdown(f"""
+            <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; margin-bottom: 16px;">
+                <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Active Patient Scan</div>
+                <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-main); word-break: break-all;">{st.session_state['active_sample_name']}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Reset / New Scan", icon=":material/refresh:", use_container_width=True):
+            st.session_state['active_sample_path'] = None
+            st.session_state['active_sample_name'] = None
+            st.session_state['report_data'] = None
+            st.rerun()
+
+    # System Telemetry Card
+    dev_str = "CUDA (Accelerated)" if device.type == "cuda" else "CPU (Standard)"
+    st.markdown(f"""
+        <div class="telemetry-card">
+            <div class="telemetry-header">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+                <span>System Telemetry</span>
+            </div>
+            <div class="telemetry-row">
+                <span class="telemetry-label">U-Net Vessel Seg:</span>
+                <span class="telemetry-pill telemetry-ready">Ready</span>
+            </div>
+            <div class="telemetry-row">
+                <span class="telemetry-label">ResNet50 + XGB:</span>
+                <span class="telemetry-pill telemetry-ready">Active</span>
+            </div>
+            <div class="telemetry-row">
+                <span class="telemetry-label">Compute Device:</span>
+                <span class="telemetry-pill telemetry-info">{dev_str}</span>
+            </div>
+            <div class="telemetry-row">
+                <span class="telemetry-label">Security State:</span>
+                <span class="telemetry-pill telemetry-ready">HIPAA Safe</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# ====================================================================
+# 10. ROUTING & PAGE HANDLERS
 # ====================================================================
 
 # -------------------------------------------------------------
-# PAGE 1: DIAGNOSTIC CONSOLE
+# PAGE 1: DIAGNOSTICS CONSOLE
 # -------------------------------------------------------------
-if "Diagnostic Console" in page:
-    # Initialize active scan state
-    if 'active_sample_path' not in st.session_state:
-        st.session_state['active_sample_path'] = None
-    if 'active_sample_name' not in st.session_state:
-        st.session_state['active_sample_name'] = None
-
-    # Check active image before rendering top bar
+if active_page == "Diagnostics":
     active_img = None
     active_filename = None
 
@@ -1317,175 +1155,173 @@ if "Diagnostic Console" in page:
         active_img = Image.open(st.session_state['active_sample_path']).convert('RGB')
         active_filename = st.session_state['active_sample_name']
 
-    scan_id_preview = f"NS-{abs(hash(active_filename.lower())) % 1000000:06d}" if active_filename else None
-
-    # Full-Width SaaS Application Navbar
-    scan_badge_html = f"<div class='active-scan-badge'>Scan ID: {scan_id_preview}</div>" if scan_id_preview else "<div class='status-pill-saas'>Mode: Ready for Ingestion</div>"
-    
-    st.markdown(f"""
-        <div class="saas-navbar">
-            <div class="navbar-left">
-                <div class="brand-badge-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M3 12h2m14 0h2M12 3v2m0 14v2"></path>
-                        <circle cx="12" cy="12" r="8" stroke-dasharray="2 3"></circle>
-                    </svg>
-                </div>
-                <div class="brand-text-group">
-                    <div class="brand-title">NeuroSight <span class="brand-ai">AI</span></div>
-                    <div class="brand-subtitle">SaMD Diagnostic Suite • Multi-Parametric Retinal Phenotyping</div>
-                </div>
-            </div>
-            <div class="navbar-right">
-                <div class="status-pill-saas">
-                    <span class="status-pulse-dot"></span>
-                    HIPAA De-Identified • Model Ensemble Ready
-                </div>
-                {scan_badge_html}
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
     # -------------------------------------------------------------
-    # EMPTY-STATE ONBOARDING & UPLOAD HERO (WHEN NO SCAN IS LOADED)
+    # EMPTY STATE: ONBOARDING & UPLOAD HERO (WHEN NO SCAN IS LOADED)
     # -------------------------------------------------------------
     if active_img is None:
-        col_drop, col_pipe = st.columns([62, 38], gap="large")
+        # Hero Greeting
+        st.markdown("""
+            <div style="margin-bottom: 24px;">
+                <h1 style="font-size: 1.95rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px; letter-spacing: -0.6px;">
+                    Retinal Neurological Health Screening
+                </h1>
+                <p style="font-size: 0.98rem; color: var(--text-sub); margin: 0; line-height: 1.55; max-width: 860px;">
+                    Non-invasive, deep-learning microvascular phenotyping. Upload a standard color fundus photograph to automatically segment the retinal capillary arbor, compute geometric biomarkers, and evaluate subclinical indicators of neurological and cardiovascular strain.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
 
-        with col_drop:
+        # Single Unified Upload Card
+        st.markdown("""
+            <div class="health-card" style="margin-bottom: 24px; text-align: center; padding: 36px 24px;">
+                <div style="width: 58px; height: 58px; border-radius: 18px; background: var(--accent-subtle); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="6" stroke-dasharray="2 2"></circle>
+                        <circle cx="12" cy="12" r="2.5"></circle>
+                        <path d="M12 2v2m0 16v2M2 12h2m16 0h2"></path>
+                    </svg>
+                </div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    Upload Retinal Fundus Scan
+                </div>
+                <div style="font-size: 0.88rem; color: var(--text-sub); max-width: 580px; margin: 0 auto 20px auto; line-height: 1.5;">
+                    Select or drag-and-drop a patient color fundus photograph (CFP, 45°–50° FOV). Supported formats include PNG, JPG, JPEG, and TIFF (min 224×224 px).
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        uploaded_file = st.file_uploader(
+            "Upload patient color fundus scan",
+            type=["png", "jpg", "jpeg", "tif", "tiff"],
+            label_visibility="collapsed",
+            key="empty_state_uploader"
+        )
+
+        if uploaded_file is not None:
+            active_img = Image.open(uploaded_file).convert('RGB')
+            active_filename = uploaded_file.name
+            st.session_state['active_sample_path'] = None
+            st.session_state['active_sample_name'] = uploaded_file.name
+            st.rerun()
+
+        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+
+        # 2 Pastel Quick-Test Sample Cards
+        st.markdown("<div style='font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px;'>1-Click Benchmark Scans (Instant Evaluation)</div>", unsafe_allow_html=True)
+        col_s1, col_s2 = st.columns(2)
+
+        with col_s1:
             st.markdown("""
-                <div class="upload-dropzone-hero">
-                    <div style="margin-bottom: 14px;">
-                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <circle cx="12" cy="12" r="6" stroke-dasharray="2 2"></circle>
-                            <circle cx="12" cy="12" r="2.5"></circle>
-                            <path d="M12 2v2m0 16v2M2 12h2m16 0h2"></path>
-                        </svg>
-                    </div>
-                    <div class="dropzone-title">Ingest Retinal Fundus Modality</div>
-                    <div class="dropzone-subtitle">Drop patient color fundus photography (CFP) to automatically trigger 540nm green channel extraction, U-Net vessel tree segmentation, and fused risk stratification.</div>
-                    <div class="dropzone-specs">
-                        <span class="spec-tag">PNG</span>
-                        <span class="spec-tag">JPG / JPEG</span>
-                        <span class="spec-tag">TIFF</span>
-                        <span class="spec-tag">Color Fundus 50° FOV</span>
-                        <span class="spec-tag">Min 224×224 px</span>
+                <div class="health-card" style="padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; background: var(--emerald-bg); color: var(--emerald-text); border: 1px solid var(--emerald-border); font-size: 0.72rem; font-weight: 700; margin-bottom: 10px;">
+                            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+                            Normative Baseline
+                        </div>
+                        <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                            DRIVE 01_test (Healthy Control)
+                        </div>
+                        <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.5; margin-bottom: 16px;">
+                            Standard healthy adult retinal vascular tree with physiological capillary density (VD ≈ 14.2%) and smooth, low tortuosity.
+                        </div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
+            if st.button("Load Healthy Control Scan", icon=":material/check_circle:", use_container_width=True):
+                drive_scan = available_samples.get("DRIVE 01_test (Normative Healthy)")
+                if drive_scan and os.path.exists(drive_scan):
+                    st.session_state['active_sample_path'] = drive_scan
+                    st.session_state['active_sample_name'] = "01_test.tif"
+                    st.rerun()
 
-            uploaded_file = st.file_uploader(
-                "Upload retinal fundus scan",
-                type=["png", "jpg", "jpeg", "tif", "tiff"],
-                label_visibility="collapsed",
-                key="empty_fundus_uploader"
-            )
-
-            if uploaded_file is not None:
-                active_img = Image.open(uploaded_file).convert('RGB')
-                active_filename = uploaded_file.name
-                st.session_state['active_sample_path'] = None
-                st.session_state['active_sample_name'] = uploaded_file.name
-                st.rerun()
-
-            st.markdown("<div style='margin-top: 18px; font-size: 0.74rem; font-family: var(--font-mono); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;'>1-Click Benchmark Scans (Instant Diagnostic Pipeline Evaluation)</div>", unsafe_allow_html=True)
-            
-            s_col1, s_col2 = st.columns(2)
-            with s_col1:
-                if st.button("Load DRIVE 01_test (Healthy)", icon=":material/check_circle:", use_container_width=True):
-                    drive_scan = available_samples.get("DRIVE 01_test (Normative Healthy)")
-                    if drive_scan and os.path.exists(drive_scan):
-                        st.session_state['active_sample_path'] = drive_scan
-                        st.session_state['active_sample_name'] = "01_test.tif"
-                        st.rerun()
-            with s_col2:
-                if st.button("Load Diabetic Retinopathy", icon=":material/warning:", use_container_width=True):
-                    dr_scan = available_samples.get("Diabetic Retinopathy (Pathology)")
-                    if dr_scan and os.path.exists(dr_scan):
-                        st.session_state['active_sample_path'] = dr_scan
-                        st.session_state['active_sample_name'] = "diabetic_retinopathy_10003.jpeg"
-                        st.rerun()
-
-        with col_pipe:
+        with col_s2:
             st.markdown("""
-                <div class="pipeline-card">
-                    <div class="pipeline-header">
-                        <div class="pipeline-title">Deterministic Diagnostic Pipeline</div>
-                        <div class="pipeline-badge">FDA SaMD Class II</div>
-                    </div>
-                    <div class="pipeline-steps">
-                        <div class="step-item">
-                            <div class="step-num">01</div>
-                            <div class="step-content">
-                                <div class="step-heading">FOV Curing & 540nm CLAHE</div>
-                                <div class="step-desc">Adaptive Otsu luminance mask, 19×19 elliptical erosion strips camera perimeters. Peak green oxyhemoglobin channel contrast-normalized.</div>
-                            </div>
+                <div class="health-card" style="padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; background: var(--coral-bg); color: var(--coral-text); border: 1px solid var(--coral-border); font-size: 0.72rem; font-weight: 700; margin-bottom: 10px;">
+                            <span style="width: 6px; height: 6px; border-radius: 50%; background: #EF4444; display: inline-block;"></span>
+                            Clinical Pathology
                         </div>
-                        <div class="step-connector"></div>
-                        <div class="step-item">
-                            <div class="step-num">02</div>
-                            <div class="step-content">
-                                <div class="step-heading">U-Net & Frangi Vessel Extraction</div>
-                                <div class="step-desc">Multi-scale Hessian eigenvalue vesselness filtering combined with deep U-Net double-convolutions isolates microvascular tree bounded strictly inside FOV mask.</div>
-                            </div>
+                        <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                            Diabetic Retinopathy (Microvascular Strain)
                         </div>
-                        <div class="step-connector"></div>
-                        <div class="step-item">
-                            <div class="step-num">03</div>
-                            <div class="step-content">
-                                <div class="step-heading">ResNet50 + XGBoost Stratification</div>
-                                <div class="step-desc">2,048-dim latent texture embedding fused with 4 calibrated geometric biomarkers (VD, T, FD, VW) evaluated by XGBoost ensemble.</div>
-                            </div>
+                        <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.5; margin-bottom: 16px;">
+                            Demonstrates marked microvascular alterations, vessel tortuosity, and capillary drop-out characteristic of systemic vascular remodeling.
                         </div>
-                    </div>
-                    <div class="pipeline-footer">
-                        <span>Deterministic Math</span>
-                        <span>•</span>
-                        <span>Zero Hallucination</span>
-                        <span>•</span>
-                        <span>Sub-second Latency</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
+            if st.button("Load Elevated Risk Scan", icon=":material/warning:", use_container_width=True):
+                dr_scan = available_samples.get("Diabetic Retinopathy (Pathology)")
+                if dr_scan and os.path.exists(dr_scan):
+                    st.session_state['active_sample_path'] = dr_scan
+                    st.session_state['active_sample_name'] = "diabetic_retinopathy_10003.jpeg"
+                    st.rerun()
+
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+
+        # 3-Step Scannable Visual Guide
+        st.markdown("""
+            <div class="health-card" style="padding: 24px;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px;">
+                    How The NeuroSight AI Screening Works
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+                    <div style="display: flex; gap: 14px; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--accent-subtle); color: var(--accent); font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">1</div>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Capture & Ingest</div>
+                            <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.45;">Standard color fundus photo from an eye exam is ingested. Perimeter borders are automatically cropped and normalized.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 14px; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--accent-subtle); color: var(--accent); font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">2</div>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">AI Microvascular Extraction</div>
+                            <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.45;">Deep U-Net segmentation isolates the full vascular tree to measure vessel density, tortuosity, and fractal complexity.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 14px; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--accent-subtle); color: var(--accent); font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">3</div>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Clinical Decision Support</div>
+                            <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.45;">ResNet-50 textural embeddings + XGBoost stratification generate an instant, plain-English patient guide and clinical PDF report.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # DIAGNOSTIC RESULTS DASHBOARD (WHEN SCAN IS LOADED)
+    # RESULTS DASHBOARD (WHEN A SCAN IS ACTIVE)
     # -------------------------------------------------------------
     else:
         img_np = np.array(active_img)
         filename_lower = active_filename.lower()
         scan_id = f"NS-{abs(hash(filename_lower)) % 1000000:06d}"
 
-        # Compact Header Control Bar (Replaces bulky upload box!)
-        ctrl_col1, ctrl_col2 = st.columns([78, 22])
+        # Top Scan Header Bar
+        ctrl_col1, ctrl_col2 = st.columns([78, 22], vertical_alignment="center")
         with ctrl_col1:
             st.markdown(f"""
-                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 18px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; box-shadow: var(--card-shadow);">
-                    <div><span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">SCAN ID:</span> <code style="color:var(--accent); font-weight:700;">{scan_id}</code></div>
-                    <div><span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">MODALITY:</span> <span style="font-weight:600; font-size:0.84rem; color:var(--text-main);">{active_filename}</span></div>
-                    <div><span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">RECORDED:</span> <span style="font-family: var(--font-mono); font-size:0.8rem; color:var(--text-sub);">{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}</span></div>
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 12px 20px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; box-shadow: var(--card-shadow);">
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">SCAN ID:</span> <span style="color:var(--accent); font-weight:700; font-family:var(--font-mono); font-size:0.92rem;">{scan_id}</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">MODALITY:</span> <span style="font-weight:600; font-size:0.86rem; color:var(--text-main);">{active_filename}</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">TIMESTAMP:</span> <span style="font-size:0.84rem; color:var(--text-sub);">{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}</span></div>
+                    <div style="margin-left: auto;"><span class="pill-status pill-normal">AI Pipeline Complete</span></div>
                 </div>
             """, unsafe_allow_html=True)
+
         with ctrl_col2:
-            if st.button("Reset / New Scan", icon=":material/refresh:", use_container_width=True):
+            if st.button("New Scan / Reset", icon=":material/refresh:", use_container_width=True):
                 st.session_state['active_sample_path'] = None
                 st.session_state['active_sample_name'] = None
-                st.rerun()
-
-        # Collapsible compact alternative upload bar
-        with st.expander("Upload Alternative Scan / Switch Patient Image", expanded=False):
-            switch_uploader = st.file_uploader("Upload new scan", type=["png", "jpg", "jpeg", "tif", "tiff"], key="switch_uploader")
-            if switch_uploader is not None:
-                active_img = Image.open(switch_uploader).convert('RGB')
-                active_filename = switch_uploader.name
-                st.session_state['active_sample_path'] = None
-                st.session_state['active_sample_name'] = switch_uploader.name
+                st.session_state['report_data'] = None
                 st.rerun()
 
         # Execute Deep Learning & Mathematical Pipeline (100% INTACT)
-        with st.spinner("Processing Microvascular Segmentation & Risk Stratification..."):
+        with st.spinner("Analyzing microvascular morphology & neurological markers..."):
             img_resized, img_gray, seg_mask, fov_mask = segment_vessels(img_np, unet_model, device)
             
             # Dataset Classification Logic
@@ -1533,31 +1369,82 @@ if "Diagnostic Console" in page:
             }
 
         # -------------------------------------------------------------
-        # 4-COLUMN HERO METRIC BENTO STRIP
+        # TOP SUMMARY HERO CARD (PLAIN-ENGLISH TAKEAWAY)
         # -------------------------------------------------------------
-        bento1, bento2, bento3, bento4 = st.columns(4)
-
-        with bento1:
-            risk_color = "var(--crimson)" if final_pred == 1 else "var(--emerald)"
-            risk_label = "ELEVATED RISK" if final_pred == 1 else "LOW RISK"
-            status_dot_col = "#EF4444" if final_pred == 1 else "#10B981"
+        if final_pred == 1:
             st.markdown(f"""
-                <div class="bento-grid-card">
-                    <div class="bento-label">
-                        <span>Risk Stratification</span>
-                        <span style="width: 7px; height: 7px; border-radius: 50%; background: {status_dot_col};"></span>
+                <div class="summary-hero-card summary-hero-elevated">
+                    <div class="summary-hero-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
                     </div>
-                    <div class="bento-val" style="color: {risk_color};">{risk_label}</div>
+                    <div>
+                        <div class="summary-hero-title">
+                            Elevated Microvascular Risk Detected &nbsp;•&nbsp; AI Confidence: {risk_conf:.1f}%
+                        </div>
+                        <div class="summary-hero-desc">
+                            The microvascular analysis identified notable vascular variations, including heightened vessel tortuosity or capillary rarefaction. Because retinal microvessels reflect systemic and cerebral vascular state, we recommend discussing these screening results with your eye care or medical specialist for routine follow-up.
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+                <div class="summary-hero-card summary-hero-normal">
+                    <div class="summary-hero-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="summary-hero-title">
+                            Normal Retinal Microvascular Pattern &nbsp;•&nbsp; AI Confidence: {risk_conf:.1f}%
+                        </div>
+                        <div class="summary-hero-desc">
+                            Capillary density, branching fractal geometry, and vessel caliber align well with healthy normative benchmarks. There are no signs of abnormal vessel constriction or excessive tortuosity. Continue maintaining regular health and wellness check-ups.
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # -------------------------------------------------------------
+        # 4-COLUMN BENTO METRIC STRIP (2x2 on Mobile, 4x1 on Desktop)
+        # -------------------------------------------------------------
+        bm1, bm2, bm3, bm4 = st.columns(4)
+
+        with bm1:
+            r_color = "var(--coral-text)" if final_pred == 1 else "var(--emerald-text)"
+            r_label = "Elevated Risk" if final_pred == 1 else "Low Risk"
+            st.markdown(f"""
+                <div class="bento-metric-card">
+                    <div class="bento-header">
+                        <span class="bento-title">RISK ASSESSMENT</span>
+                        <div class="bento-icon-badge">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="m9 12 2 2 4-4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="bento-val" style="color: {r_color};">{r_label}</div>
                     <div class="bento-sub">Microvascular & Neurological Axis</div>
                 </div>
             """, unsafe_allow_html=True)
 
-        with bento2:
+        with bm2:
             st.markdown(f"""
-                <div class="bento-grid-card">
-                    <div class="bento-label">
-                        <span>AI Confidence</span>
-                        <span class="metric-range-pill">Ensemble</span>
+                <div class="bento-metric-card">
+                    <div class="bento-header">
+                        <span class="bento-title">AI CONFIDENCE</span>
+                        <div class="bento-icon-badge">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                        </div>
                     </div>
                     <div class="bento-val" style="color: var(--accent);">{risk_conf:.1f}%</div>
                     <div class="mini-progress-track">
@@ -1566,168 +1453,97 @@ if "Diagnostic Console" in page:
                 </div>
             """, unsafe_allow_html=True)
 
-        with bento3:
+        with bm3:
             st.markdown(f"""
-                <div class="bento-grid-card">
-                    <div class="bento-label">
-                        <span>Vessel Density (VD)</span>
-                        <span class="metric-range-pill">Norm: 10.0%–17.5%</span>
+                <div class="bento-metric-card">
+                    <div class="bento-header">
+                        <span class="bento-title">VESSEL DENSITY (VD)</span>
+                        <span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; background: var(--card-bg-elevated); color: var(--text-muted); font-weight: 600;">Norm: 10–17.5%</span>
                     </div>
                     <div class="bento-val" style="color: var(--text-main);">{b_marks['VD']*100:.2f}%</div>
                     <div class="bento-sub">Active FOV Capillary Bed Perfusion</div>
                 </div>
             """, unsafe_allow_html=True)
 
-        with bento4:
+        with bm4:
             st.markdown(f"""
-                <div class="bento-grid-card">
-                    <div class="bento-label">
-                        <span>Vessel Tortuosity (T)</span>
-                        <span class="metric-range-pill">Norm: 1.10–1.35</span>
+                <div class="bento-metric-card">
+                    <div class="bento-header">
+                        <span class="bento-title">VESSEL TORTUOSITY (T)</span>
+                        <span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; background: var(--card-bg-elevated); color: var(--text-muted); font-weight: 600;">Norm: 1.10–1.35</span>
                     </div>
                     <div class="bento-val" style="color: var(--text-main);">{b_marks['T']:.2f}</div>
-                    <div class="bento-sub">Per-Branch Arc-Chord Ratio</div>
+                    <div class="bento-sub">Per-Branch Arc-Chord Curvature Ratio</div>
                 </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
 
         # -------------------------------------------------------------
-        # HIGH-CONTRAST CLINICAL ASSESSMENT ALERT BANNER
+        # MEDICAL IMAGING LIGHTBOX VIEWPORTS (DARK CONTRAST FRAMES)
         # -------------------------------------------------------------
-        if final_pred == 1:
-            st.markdown(f"""
-                <div class="clinical-alert-elevated">
-                    <div class="alert-title">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
-                        Elevated Neurological & Microvascular Risk Detected &nbsp;•&nbsp; Confidence: {risk_conf:.1f}%
-                    </div>
-                    <div class="alert-body">
-                        <strong>Primary Clinical Finding:</strong> Quantitative funduscopic evaluation demonstrates microvascular rarefaction, structural caliber alteration, or high branch tortuosity. These patterns demonstrate documented correlation with cerebral small vessel disease, elevated stroke vulnerability, and subclinical microvascular remodeling.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                <div class="clinical-alert-normal">
-                    <div class="alert-title">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        Physiologically Normal / Low Risk Vascular Pattern &nbsp;•&nbsp; Confidence: {risk_conf:.1f}%
-                    </div>
-                    <div class="alert-body">
-                        <strong>Primary Clinical Finding:</strong> Microvascular branching density, fractal index, and vessel curvature remain well within standard healthy normative distributions. No evidence of pathological arteriolar narrowing or venular dilation detected.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Multi-Spectral Medical Imaging Viewports</div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-
-        # -------------------------------------------------------------
-        # MEDICAL IMAGING LIGHTBOX VIEWPORTS (DARK BACKING FOR CONTRAST)
-        # -------------------------------------------------------------
-        st.markdown("<h3 style='font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Multi-Spectral Medical Imaging Viewports</h3>", unsafe_allow_html=True)
-        
         tab_matrix, tab_inspector = st.tabs([":material/grid_view: 2x2 Viewport Matrix", ":material/zoom_in: Single Modality Inspector"])
 
         overlay = img_resized.copy()
-        overlay_color = [0, 229, 255] if is_dark else [2, 132, 199]
+        overlay_color = [0, 229, 255] if is_dark else [37, 99, 235]
         overlay[seg_mask > 0.5] = overlay_color
 
         with tab_matrix:
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
                 st.markdown("""
-                    <div class="medical-viewport-card">
-                        <div class="viewport-hud">
-                            <div class="viewport-hud-title"><span class="viewport-hud-dot"></span>VIEWPORT 01 • RAW FUNDUS MODALITY</div>
-                            <div>COLOR CFP • 50° FOV</div>
+                    <div class="viewport-container">
+                        <div class="viewport-header">
+                            <span>VIEWPORT 01 • RAW COLOR FUNDUS</span>
+                            <span class="viewport-badge">COLOR CFP • 50° FOV</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
                 st.image(img_resized, use_container_width=True)
-                st.markdown("""
-                    <div class="medical-viewport-card" style="margin-top:-14px;">
-                        <div class="viewport-meta">
-                            <span>DIM: 224×224 px</span>
-                            <span>COLORSPACE: RGB</span>
-                            <span>STATUS: RAW RETINA</span>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
 
             with row1_col2:
                 st.markdown("""
-                    <div class="medical-viewport-card">
-                        <div class="viewport-hud">
-                            <div class="viewport-hud-title"><span class="viewport-hud-dot"></span>VIEWPORT 02 • CLAHE GREEN BAND (540nm)</div>
-                            <div>PEAK OXYHEMOGLOBIN ABSORPTION</div>
+                    <div class="viewport-container">
+                        <div class="viewport-header">
+                            <span>VIEWPORT 02 • 540nm GREEN BAND (CLAHE)</span>
+                            <span class="viewport-badge">OXYHEMOGLOBIN PEAK</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
                 st.image(img_gray, use_container_width=True, clamp=True)
-                st.markdown("""
-                    <div class="medical-viewport-card" style="margin-top:-14px;">
-                        <div class="viewport-meta">
-                            <span>CLIP: 2.8 • TILE: 8×8</span>
-                            <span>SMOOTH: GAUSS (3×3)</span>
-                            <span>STATUS: FILTERED GREEN</span>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
 
             row2_col1, row2_col2 = st.columns(2)
             with row2_col1:
                 st.markdown("""
-                    <div class="medical-viewport-card">
-                        <div class="viewport-hud">
-                            <div class="viewport-hud-title"><span class="viewport-hud-dot"></span>VIEWPORT 03 • U-NET MICROVASCULAR MASK</div>
-                            <div>DEEP SEMANTIC SEGMENTATION</div>
+                    <div class="viewport-container">
+                        <div class="viewport-header">
+                            <span>VIEWPORT 03 • U-NET VESSEL TREE</span>
+                            <span class="viewport-badge">DEEP SEGMENTATION</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
                 st.image((seg_mask * 255).astype(np.uint8), use_container_width=True, clamp=True)
-                st.markdown("""
-                    <div class="medical-viewport-card" style="margin-top:-14px;">
-                        <div class="viewport-meta">
-                            <span>ALGO: U-NET + FRANGI</span>
-                            <span>MASK: BINARY TREE</span>
-                            <span>STATUS: SEGMENTED</span>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
 
             with row2_col2:
                 st.markdown("""
-                    <div class="medical-viewport-card">
-                        <div class="viewport-hud">
-                            <div class="viewport-hud-title"><span class="viewport-hud-dot"></span>VIEWPORT 04 • CO-REGISTERED OVERLAY</div>
-                            <div>PERFUSION CO-REGISTRATION</div>
+                    <div class="viewport-container">
+                        <div class="viewport-header">
+                            <span>VIEWPORT 04 • CO-REGISTERED OVERLAY</span>
+                            <span class="viewport-badge">VASCULAR ARBOR</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
                 st.image(overlay, use_container_width=True)
-                st.markdown("""
-                    <div class="medical-viewport-card" style="margin-top:-14px;">
-                        <div class="viewport-meta">
-                            <span>CHANNELS: COMPOSITE RGB</span>
-                            <span>HIGHLIGHT: VASCULAR ARBOR</span>
-                            <span>STATUS: CO-REGISTERED</span>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
 
         with tab_inspector:
             inspector_choice = st.segmented_control(
                 "Select Modality to Inspect",
                 options=["Raw Color Fundus", "CLAHE Green Band", "Microvascular Segmentation Mask", "Co-Registered Overlay"],
-                default="Co-Registered Overlay"
+                default="Co-Registered Overlay",
+                selection_mode="single",
+                required=True
             )
             if inspector_choice == "Raw Color Fundus":
                 st.image(img_resized, caption="Full-Resolution Raw Color Fundus Modality", use_container_width=True)
@@ -1738,12 +1554,12 @@ if "Diagnostic Console" in page:
             else:
                 st.image(overlay, caption="Fused Fluorescent Vascular Overlay on Fundus Background", use_container_width=True)
 
-        st.markdown("<div style='margin-top: 22px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
 
         # -------------------------------------------------------------
-        # QUANTITATIVE BIOMARKER TABLE & REFERENCE BASELINES
+        # QUANTITATIVE BIOMARKER TABLE & NORMATIVE BASELINES
         # -------------------------------------------------------------
-        st.markdown("<h3 style='font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;'>Quantitative Biomarker Panel & Normative Baselines</h3>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Quantitative Biomarker Panel & Normative Baselines</div>", unsafe_allow_html=True)
 
         vd_val = b_marks['VD'] * 100
         vd_ok = 10.0 <= vd_val <= 17.5
@@ -1769,30 +1585,30 @@ if "Diagnostic Console" in page:
                     <tbody>
                         <tr>
                             <td><strong>Vessel Density (VD)</strong></td>
-                            <td><code style="color:var(--accent); font-weight:700;">{vd_val:.2f}%</code></td>
+                            <td><span style="color:var(--accent); font-weight:700; font-family:var(--font-mono);">{vd_val:.2f}%</span></td>
                             <td>10.0% – 17.5%</td>
-                            <td><span class="{ 'status-pill-ok' if vd_ok else 'status-pill-alert' }">{ 'NORMAL' if vd_ok else 'DEVIATING' }</span></td>
-                            <td>Low VD reflects capillary drop-out or cerebral ischemia; elevated values indicate aberrant neovascularization.</td>
+                            <td><span class="{ 'pill-status pill-normal' if vd_ok else 'pill-status pill-elevated' }">{ 'NORMAL' if vd_ok else 'DEVIATING' }</span></td>
+                            <td>Low VD reflects capillary drop-out or hypoperfusion; elevated values indicate aberrant neovascularization.</td>
                         </tr>
                         <tr>
                             <td><strong>Vessel Tortuosity (T)</strong></td>
-                            <td><code style="color:var(--accent); font-weight:700;">{t_val:.2f}</code></td>
+                            <td><span style="color:var(--accent); font-weight:700; font-family:var(--font-mono);">{t_val:.2f}</span></td>
                             <td>1.10 – 1.35</td>
-                            <td><span class="{ 'status-pill-ok' if t_ok else 'status-pill-alert' }">{ 'NORMAL' if t_ok else 'ELEVATED' }</span></td>
+                            <td><span class="{ 'pill-status pill-normal' if t_ok else 'pill-status pill-elevated' }">{ 'NORMAL' if t_ok else 'ELEVATED' }</span></td>
                             <td>Elevated tortuosity reflects chronic hemodynamic shear stress, arterial hypertension, or microaneurysms.</td>
                         </tr>
                         <tr>
                             <td><strong>Fractal Dimension (FD)</strong></td>
-                            <td><code style="color:var(--accent); font-weight:700;">{fd_val:.4f}</code></td>
+                            <td><span style="color:var(--accent); font-weight:700; font-family:var(--font-mono);">{fd_val:.4f}</span></td>
                             <td>1.40 – 1.70</td>
-                            <td><span class="{ 'status-pill-ok' if fd_ok else 'status-pill-alert' }">{ 'NORMAL' if fd_ok else 'REDUCED' }</span></td>
-                            <td>Branching complexity loss strongly correlates with neurodegenerative decline and early Alzheimer's.</td>
+                            <td><span class="{ 'pill-status pill-normal' if fd_ok else 'pill-status pill-elevated' }">{ 'NORMAL' if fd_ok else 'REDUCED' }</span></td>
+                            <td>Branching complexity loss correlates with progressive neurodegenerative decline and vascular rarefaction.</td>
                         </tr>
                         <tr>
                             <td><strong>Average Caliber (VW)</strong></td>
-                            <td><code style="color:var(--accent); font-weight:700;">{vw_val:.2f} px</code></td>
+                            <td><span style="color:var(--accent); font-weight:700; font-family:var(--font-mono);">{vw_val:.2f} px</span></td>
                             <td>2.0 – 4.5 px</td>
-                            <td><span class="{ 'status-pill-ok' if vw_ok else 'status-pill-alert' }">{ 'NORMAL' if vw_ok else 'ALTERED' }</span></td>
+                            <td><span class="{ 'pill-status pill-normal' if vw_ok else 'pill-status pill-elevated' }">{ 'NORMAL' if vw_ok else 'ALTERED' }</span></td>
                             <td>Caliber alterations indicate generalized endothelial dysfunction or venular dilation.</td>
                         </tr>
                     </tbody>
@@ -1800,21 +1616,21 @@ if "Diagnostic Console" in page:
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
         # -------------------------------------------------------------
-        # INTERACTIVE PLOTLY CLINICAL CHARTS (HIGH-CONTRAST)
+        # INTERACTIVE ANALYTICS & POPULATION CHARTS
         # -------------------------------------------------------------
-        st.markdown("<h3 style='font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Clinical Analytics & Population Distribution</h3>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Clinical Analytics & Population Distribution</div>", unsafe_allow_html=True)
         g_col1, g_col2 = st.columns(2)
 
         chart_font_color = '#0F172A' if not is_dark else '#F8FAFC'
         chart_grid_color = '#E2E8F0' if not is_dark else 'rgba(255, 255, 255, 0.08)'
-        trendline_color = '#0284C7' if not is_dark else '#38BDF8'
-        patient_color = '#DC2626' if final_pred == 1 else ('#0284C7' if not is_dark else '#38BDF8')
+        trendline_color = '#2563EB' if not is_dark else '#3B82F6'
+        patient_color = '#DC2626' if final_pred == 1 else ('#2563EB' if not is_dark else '#3B82F6')
 
         with g_col1:
-            st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;'>Linear Regression: Tortuosity vs Fractal Complexity</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;'>Linear Regression: Tortuosity vs Fractal Complexity</div>", unsafe_allow_html=True)
             df_reg = pd.DataFrame({
                 "Tortuosity": np.linspace(1.1, 2.5, 40),
                 "Fractal Complexity": 1.70 - (0.28 * np.linspace(1.1, 2.5, 40)) + np.random.normal(0, 0.02, 40)
@@ -1831,7 +1647,7 @@ if "Diagnostic Console" in page:
                 x=[b_marks['T']],
                 y=[b_marks['FD']],
                 mode='markers+text',
-                name='Patient Observed',
+                name='Patient Scan',
                 text=['Patient Coordinate'],
                 textposition='top center',
                 marker=dict(
@@ -1847,12 +1663,12 @@ if "Diagnostic Console" in page:
                 margin=dict(t=20, b=20, l=30, r=20),
                 font=dict(family='Plus Jakarta Sans, sans-serif', size=11, color=chart_font_color),
                 xaxis=dict(
-                    title=dict(text="Tortuosity Index (T)", font=dict(family='JetBrains Mono', size=11)),
+                    title=dict(text="Tortuosity Index (T)", font=dict(family='Plus Jakarta Sans', size=11)),
                     gridcolor=chart_grid_color,
                     zerolinecolor=chart_grid_color
                 ),
                 yaxis=dict(
-                    title=dict(text="Fractal Dimension (FD)", font=dict(family='JetBrains Mono', size=11)),
+                    title=dict(text="Fractal Dimension (FD)", font=dict(family='Plus Jakarta Sans', size=11)),
                     gridcolor=chart_grid_color,
                     zerolinecolor=chart_grid_color
                 ),
@@ -1861,7 +1677,7 @@ if "Diagnostic Console" in page:
             st.plotly_chart(fig1, use_container_width=True)
 
         with g_col2:
-            st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;'>Radar Spider Profile vs Healthy Population Norm</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;'>Radar Spider Profile vs Healthy Population Norm</div>", unsafe_allow_html=True)
             categories = ['Density (VD)', 'Tortuosity (T)', 'Fractal Dim (FD)', 'Width (VW)']
             norm_vd = min(max((b_marks['VD']*100 / 17.5) * 70, 10), 100)
             norm_t = min(max((b_marks['T'] / 1.35) * 50, 10), 100)
@@ -1878,8 +1694,8 @@ if "Diagnostic Console" in page:
                 line=dict(color='#10B981', width=2),
                 fillcolor='rgba(16, 185, 129, 0.18)'
             ))
-            patient_radar_col = '#DC2626' if final_pred == 1 else ('#0284C7' if not is_dark else '#38BDF8')
-            patient_fill_col = 'rgba(220, 38, 38, 0.22)' if final_pred == 1 else ('rgba(2, 132, 199, 0.22)' if not is_dark else 'rgba(56, 189, 248, 0.22)')
+            patient_radar_col = '#DC2626' if final_pred == 1 else ('#2563EB' if not is_dark else '#3B82F6')
+            patient_fill_col = 'rgba(220, 38, 38, 0.22)' if final_pred == 1 else ('rgba(37, 99, 235, 0.22)' if not is_dark else 'rgba(59, 130, 246, 0.22)')
             fig2.add_trace(go.Scatterpolar(
                 r=patient_vals + [patient_vals[0]],
                 theta=categories + [categories[0]],
@@ -1895,12 +1711,12 @@ if "Diagnostic Console" in page:
                         range=[0, 100],
                         gridcolor=chart_grid_color,
                         linecolor=chart_grid_color,
-                        tickfont=dict(family='JetBrains Mono', size=9, color=chart_font_color)
+                        tickfont=dict(family='Plus Jakarta Sans', size=9, color=chart_font_color)
                     ),
                     angularaxis=dict(
                         gridcolor=chart_grid_color,
                         linecolor=chart_grid_color,
-                        tickfont=dict(family='JetBrains Mono', size=10, color=chart_font_color)
+                        tickfont=dict(family='Plus Jakarta Sans', size=10, color=chart_font_color)
                     ),
                     bgcolor='rgba(0,0,0,0)'
                 ),
@@ -1916,17 +1732,16 @@ if "Diagnostic Console" in page:
         st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
 
         # -------------------------------------------------------------
-        # PRIMARY ACTION BAR (FULL-WIDTH REPORT DOWNLOAD)
+        # REPORT DOWNLOAD & EHR EXPORT
         # -------------------------------------------------------------
-        st.markdown("<h3 style='font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Clinical Documentation & Report Export</h3>", unsafe_allow_html=True)
-        
+        st.markdown("<div style='font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>Clinical Documentation & Report Export</div>", unsafe_allow_html=True)
         pdf_bytes = generate_clinical_pdf(st.session_state['report_data'])
         act_col1, act_col2 = st.columns([65, 35])
         
         with act_col1:
             if pdf_bytes:
                 st.download_button(
-                    label="Download Official Clinical PDF Report (FDA SaMD)",
+                    label="Download Clinical PDF Report",
                     data=pdf_bytes,
                     file_name=f"neurosight_clinical_report_{scan_id}.pdf",
                     mime="application/pdf",
@@ -1936,7 +1751,7 @@ if "Diagnostic Console" in page:
             else:
                 report_text = f"NEUROSIGHT AI - CLINICAL RETINAL REPORT\nScan ID: {scan_id}\nTimestamp: {datetime.datetime.now()}\nFile: {active_filename}\nResult: {'Elevated Risk' if final_pred == 1 else 'Low Risk'} ({risk_conf:.1f}%)\nMetrics: VD={b_marks['VD']*100:.2f}%, T={b_marks['T']:.2f}, FD={b_marks['FD']:.4f}, VW={b_marks['VW']:.2f}px"
                 st.download_button(
-                    label="Download Clinical Summary Report (.TXT)",
+                    label="Download Clinical Summary (.TXT)",
                     data=report_text,
                     file_name=f"neurosight_{scan_id}.txt",
                     mime="text/plain",
@@ -1947,7 +1762,7 @@ if "Diagnostic Console" in page:
         with act_col2:
             report_text = f"NEUROSIGHT AI - EHR EXPORT RECORD\nScan ID: {scan_id}\nTimestamp: {datetime.datetime.now()}\nFile: {active_filename}\nStratification: {'Elevated Risk' if final_pred == 1 else 'Low Risk'}\nConfidence: {risk_conf:.1f}%\nVessel Density (VD): {b_marks['VD']*100:.2f}%\nVessel Tortuosity (T): {b_marks['T']:.2f}\nFractal Dimension (FD): {b_marks['FD']:.4f}\nVessel Caliber (VW): {b_marks['VW']:.2f} px"
             st.download_button(
-                label="Export EHR Data Record (.TXT)",
+                label="Export EHR Record (.TXT)",
                 data=report_text,
                 file_name=f"ehr_record_{scan_id}.txt",
                 mime="text/plain",
@@ -1956,44 +1771,36 @@ if "Diagnostic Console" in page:
             )
 
 # -------------------------------------------------------------
-# PAGE 2: PATIENT EXPLANATION
+# PAGE 2: PATIENT GUIDE & EXPLANATION
 # -------------------------------------------------------------
-elif "Patient Explanation" in page or "Patient Summary" in page:
+elif active_page == "Patient Guide":
     st.markdown("""
-        <div class="saas-navbar">
-            <div class="navbar-left">
-                <div class="brand-badge-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4m0-4h.01"></path>
-                    </svg>
-                </div>
-                <div class="brand-text-group">
-                    <div class="brand-title">Patient Health Summary</div>
-                    <div class="brand-subtitle">NeuroSight AI • Plain-English Retinal Health Explanation</div>
-                </div>
-            </div>
-            <div class="navbar-right">
-                <div class="status-pill-saas">Patient-Friendly Synthesis</div>
-            </div>
+        <div style="margin-bottom: 22px;">
+            <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;">
+                Patient Health Summary & Guide
+            </h1>
+            <p style="font-size: 0.95rem; color: var(--text-sub); margin: 0; line-height: 1.5;">
+                Clear, plain-English explanation of what your retinal scan reveals about your vascular and neurological wellness.
+            </p>
         </div>
     """, unsafe_allow_html=True)
 
-    if 'report_data' in st.session_state:
+    if st.session_state.get('report_data'):
         d = st.session_state['report_data']
+        m = d['marks']
 
-        st.markdown("<div style='background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; margin-bottom: 22px; box-shadow: var(--card-shadow);'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color: var(--accent); margin-top: 0; font-size: 1.2rem; font-weight: 700;'>1. What did the AI discover in your scan?</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='health-card' style='margin-bottom: 22px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;'>1. Your Personalized Screening Summary</div>", unsafe_allow_html=True)
 
         if d['pred'] == 1:
-            st.markdown("""
-                <div style="color: var(--crimson-text); font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            st.markdown(f"""
+                <div style="color: var(--coral-text); font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="8" x2="12" y2="12"></line>
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                     </svg>
-                    The AI noted some subtle microvascular variations in your retinal scan.
+                    We noticed subtle microvascular variations in your retinal scan.
                 </div>
                 <div style="color: var(--text-main); line-height: 1.65; font-size: 0.92rem;">
                     Because the tiny blood vessels in the back of your eye share direct anatomical similarities with those in your brain and heart, changes here can serve as an early indicator of circulatory strain, elevated blood pressure, or microvascular remodeling.<br><br>
@@ -2001,9 +1808,9 @@ elif "Patient Explanation" in page or "Patient Summary" in page:
                 </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-                <div style="color: var(--emerald-text); font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            st.markdown(f"""
+                <div style="color: var(--emerald-text); font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                     </svg>
@@ -2015,22 +1822,21 @@ elif "Patient Explanation" in page or "Patient Summary" in page:
             """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; box-shadow: var(--card-shadow);'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color: var(--accent); margin-top: 0; font-size: 1.2rem; font-weight: 700;'>2. Understanding Your Clinical Biomarkers</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='health-card'>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 14px;'>2. Understanding Your Biomarkers (Simple Analogies)</div>", unsafe_allow_html=True)
 
-        m = d['marks']
         b_c1, b_c2 = st.columns(2)
         with b_c1:
             st.markdown(f"""
-                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">Vessel Density ({m['VD']*100:.1f}%)</div>
-                    <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.5;">
+                    <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.5;">
                         <strong>Analogy:</strong> Like an irrigation system watering a lawn. It measures how effectively micro-vessels span and nourish your retinal surface.
                     </div>
                 </div>
-                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px;">
+                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 14px; padding: 18px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">Fractal Complexity ({m['FD']:.2f})</div>
-                    <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.5;">
+                    <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.5;">
                         <strong>Analogy:</strong> Like healthy branches spreading across an oak tree. Higher complexity reflects a robust, resilient vascular architecture.
                     </div>
                 </div>
@@ -2038,15 +1844,15 @@ elif "Patient Explanation" in page or "Patient Summary" in page:
 
         with b_c2:
             st.markdown(f"""
-                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 14px; padding: 18px; margin-bottom: 14px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">Vessel Tortuosity ({m['T']:.2f})</div>
-                    <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.5;">
+                    <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.5;">
                         <strong>Analogy:</strong> Like curves in a garden hose. Too much curling or twisting can happen when blood pressure runs higher than optimal.
                     </div>
                 </div>
-                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px;">
+                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 14px; padding: 18px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">Vessel Caliber ({m['VW']:.1f} px)</div>
-                    <div style="font-size: 0.82rem; color: var(--text-sub); line-height: 1.5;">
+                    <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.5;">
                         <strong>Analogy:</strong> The diameter of the pipe. Proper vessel width ensures smooth, unobstructed blood flow to neural tissues.
                     </div>
                 </div>
@@ -2054,53 +1860,42 @@ elif "Patient Explanation" in page or "Patient Summary" in page:
         st.markdown("</div>", unsafe_allow_html=True)
 
     else:
-        st.info("No active scan in session. Please upload or load a sample image in the Diagnostic Console first.")
+        st.info("No active scan in session. Please upload or load a sample image in the Diagnostics view first.")
 
 # -------------------------------------------------------------
-# PAGE 3: EXPORT REPORTS
+# PAGE 3: EXPORT REPORTS & EHR ARCHIVAL
 # -------------------------------------------------------------
-elif "Export Reports" in page:
+elif active_page == "PDF Report":
     st.markdown("""
-        <div class="saas-navbar">
-            <div class="navbar-left">
-                <div class="brand-badge-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </svg>
-                </div>
-                <div class="brand-text-group">
-                    <div class="brand-title">EHR Data Record & PDF Export</div>
-                    <div class="brand-subtitle">NeuroSight AI • Diagnostic Record Archival Console</div>
-                </div>
-            </div>
-            <div class="navbar-right">
-                <div class="status-pill-saas">EHR Standard Compliant</div>
-            </div>
+        <div style="margin-bottom: 22px;">
+            <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;">
+                Clinical Report Archival & EHR Export
+            </h1>
+            <p style="font-size: 0.95rem; color: var(--text-sub); margin: 0; line-height: 1.5;">
+                Export verified clinical documentation, EHR text records, or printable PDF summaries.
+            </p>
         </div>
     """, unsafe_allow_html=True)
 
-    if 'report_data' in st.session_state:
+    if st.session_state.get('report_data'):
         d = st.session_state['report_data']
-        status_color = "var(--crimson)" if d['pred'] == 1 else "var(--emerald)"
         status_name = "Elevated Neurological Risk" if d['pred'] == 1 else "Normal / Low Risk Baseline"
+        status_color = "var(--coral-text)" if d['pred'] == 1 else "var(--emerald-text)"
 
         st.markdown(f"""
-            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; margin-bottom: 22px; box-shadow: var(--card-shadow);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--card-border);">
-                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Clinical Evaluation Summary Record</div>
-                    <div style="font-family: var(--font-mono); font-size: 0.72rem; padding: 3px 10px; border-radius: 6px; background: var(--card-bg-elevated); border: 1px solid var(--card-border); color: var(--accent);">
-                        READY FOR ARCHIVAL
-                    </div>
+            <div class="health-card" style="margin-bottom: 22px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--card-border);">
+                    <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Clinical Evaluation Summary Record</div>
+                    <span class="pill-status pill-normal">READY FOR ARCHIVAL</span>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
-                    <div><span style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">Scan ID:</span><br><code style="color:var(--accent); font-weight:700; font-size:1rem;">{d['scan_id']}</code></div>
-                    <div><span style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">Source Modality:</span><br><span style="font-weight:600; font-size:0.9rem; color:var(--text-main);">{d['file']}</span></div>
-                    <div><span style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">Evaluation Time:</span><br><span style="font-family: var(--font-mono); font-size:0.85rem; color:var(--text-sub);">{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</span></div>
-                    <div><span style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">Stratification:</span><br><span style="font-weight:700; font-size:0.95rem; color:{status_color};">{status_name}</span></div>
-                    <div><span style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">System Confidence:</span><br><span style="font-family: var(--font-mono); font-weight:700; font-size:1rem; color:var(--accent);">{d['conf']:.1f}%</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Scan ID:</span><br><span style="color:var(--accent); font-weight:700; font-family:var(--font-mono); font-size:1rem;">{d['scan_id']}</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Source Image:</span><br><span style="font-weight:600; font-size:0.9rem; color:var(--text-main);">{d['file']}</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Evaluation Time:</span><br><span style="font-size:0.85rem; color:var(--text-sub);">{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Stratification:</span><br><span style="font-weight:700; font-size:0.95rem; color:{status_color};">{status_name}</span></div>
+                    <div><span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">System Confidence:</span><br><span style="font-weight:700; font-size:1rem; color:var(--accent);">{d['conf']:.1f}%</span></div>
                 </div>
-                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-main);">
+                <div style="background: var(--card-bg-elevated); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; font-size: 0.82rem; color: var(--text-main);">
                     <div>• Vessel Density (VD): {d['marks']['VD']*100:.2f}%</div>
                     <div>• Vessel Tortuosity (T): {d['marks']['T']:.2f}</div>
                     <div>• Fractal Complexity (FD): {d['marks']['FD']:.4f}</div>
@@ -2110,69 +1905,59 @@ elif "Export Reports" in page:
         """, unsafe_allow_html=True)
 
         pdf_bytes = generate_clinical_pdf(d)
-        exp_col1, exp_col2 = st.columns(2)
-        with exp_col1:
+        c_p1, c_p2 = st.columns(2)
+        with c_p1:
             if pdf_bytes:
                 st.download_button(
-                    label="Download Clinical PDF Dossier",
+                    label="Download Clinical PDF Report",
                     data=pdf_bytes,
-                    file_name=f"neurosight_{d['scan_id']}.pdf",
+                    file_name=f"neurosight_report_{d['scan_id']}.pdf",
                     mime="application/pdf",
                     use_container_width=True,
                     icon=":material/picture_as_pdf:"
                 )
-        with exp_col2:
-            report_str = f"NEUROSIGHT AI - CLINICAL EHR RECORD\nScan ID: {d['scan_id']}\nDate: {datetime.datetime.now()}\nFile: {d['file']}\nResult: {'Elevated Risk' if d['pred'] == 1 else 'Low Risk'} ({d['conf']:.1f}%)\nMetrics: VD={d['marks']['VD']*100:.2f}%, T={d['marks']['T']:.2f}, FD={d['marks']['FD']:.4f}, VW={d['marks']['VW']:.2f}px"
+        with c_p2:
+            ehr_txt = f"NEUROSIGHT AI - EHR ARCHIVAL RECORD\nScan ID: {d['scan_id']}\nTimestamp: {datetime.datetime.now()}\nFile: {d['file']}\nStratification: {status_name}\nConfidence: {d['conf']:.1f}%\nVD: {d['marks']['VD']*100:.2f}%\nT: {d['marks']['T']:.2f}\nFD: {d['marks']['FD']:.4f}\nVW: {d['marks']['VW']:.2f} px"
             st.download_button(
-                label="Download Plain-Text EHR Report (.TXT)",
-                data=report_str,
-                file_name=f"neurosight_{d['scan_id']}.txt",
+                label="Download EHR Text Record (.TXT)",
+                data=ehr_txt,
+                file_name=f"ehr_record_{d['scan_id']}.txt",
                 mime="text/plain",
                 use_container_width=True,
                 icon=":material/description:"
             )
     else:
-        st.info("Upload or load a retinal scan in the Diagnostic Console to generate an exportable report.")
+        st.info("No active scan in session. Please run an assessment in the Diagnostics view first.")
 
 # -------------------------------------------------------------
-# PAGE 4: ARCHITECTURE
+# PAGE 4: HOW IT WORKS & ARCHITECTURE
 # -------------------------------------------------------------
-elif "Architecture" in page:
+elif active_page == "How It Works":
     st.markdown("""
-        <div class="saas-navbar">
-            <div class="navbar-left">
-                <div class="brand-badge-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                        <polyline points="2 17 12 22 22 17"></polyline>
-                        <polyline points="2 12 12 17 22 12"></polyline>
-                    </svg>
-                </div>
-                <div class="brand-text-group">
-                    <div class="brand-title">Engineering & ML Architecture</div>
-                    <div class="brand-subtitle">NeuroSight AI • Hybrid Convolutional & Gradient Boosted Decision Pipeline</div>
-                </div>
-            </div>
-            <div class="navbar-right">
-                <div class="status-pill-saas">SaMD Class II Architecture</div>
-            </div>
+        <div style="margin-bottom: 22px;">
+            <h1 style="font-size: 1.85rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;">
+                How NeuroSight AI Works
+            </h1>
+            <p style="font-size: 0.95rem; color: var(--text-sub); margin: 0; line-height: 1.5;">
+                Dual deep learning backbones combined with mathematical morphology for interpretable, deterministic clinical AI.
+            </p>
         </div>
     """, unsafe_allow_html=True)
 
     a1, a2 = st.columns(2)
     with a1:
         st.markdown("""
-            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; margin-bottom: 18px; box-shadow: var(--card-shadow);">
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 01 • TEXTURAL EMBEDDINGS</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">PyTorch ResNet-50 Feature Backbone</div>
-                <div style="font-size: 0.86rem; color: var(--text-sub); line-height: 1.55;">
+            <div class="health-card" style="margin-bottom: 20px;">
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 01 • TEXTURAL EMBEDDINGS</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">PyTorch ResNet-50 Feature Backbone</div>
+                <div style="font-size: 0.88rem; color: var(--text-sub); line-height: 1.6;">
                     The cured retinal fundus disc is normalized with ImageNet parameters and routed through a deep ResNet-50 convolutional neural network. The final classification head is replaced with <code>nn.Identity()</code>, yielding a rich 2,048-dimensional continuous latent texture embedding.
                 </div>
             </div>
-            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; box-shadow: var(--card-shadow);">
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 02 • FOV CURING & FILTERING</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Adaptive Otsu & 540nm CLAHE Normalization</div>
-                <div style="font-size: 0.86rem; color: var(--text-sub); line-height: 1.55;">
+            <div class="health-card">
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 02 • FOV CURING & FILTERING</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Adaptive Otsu & 540nm CLAHE Normalization</div>
+                <div style="font-size: 0.88rem; color: var(--text-sub); line-height: 1.6;">
                     Otsu adaptive thresholding isolates the active retinal field-of-view, followed by an elliptical morphological erosion (19×19 px kernel) to strip perimeter camera artifacts. The green spectrum (540nm) is isolated and contrast-equalized with CLAHE (clip 2.8, tile 8×8).
                 </div>
             </div>
@@ -2180,17 +1965,17 @@ elif "Architecture" in page:
 
     with a2:
         st.markdown("""
-            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; margin-bottom: 18px; box-shadow: var(--card-shadow);">
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 03 • SEMANTIC SEGMENTATION</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">PyTorch U-Net & Multi-Scale Frangi Curvature</div>
-                <div style="font-size: 0.86rem; color: var(--text-sub); line-height: 1.55;">
+            <div class="health-card" style="margin-bottom: 20px;">
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 03 • SEMANTIC SEGMENTATION</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">PyTorch U-Net & Multi-Scale Frangi Curvature</div>
+                <div style="font-size: 0.88rem; color: var(--text-sub); line-height: 1.6;">
                     Vessel continuity is extracted via multi-scale Hessian eigenvalue filtering (sigmas 1.0, 1.5, 2.0) and refined with deep U-Net double convolutions. Small artifact rejection ensures clean connected vascular branches strictly inside the FOV mask.
                 </div>
             </div>
-            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; box-shadow: var(--card-shadow);">
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 04 • CLASSIFICATION ENGINE</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">XGBoost Fused Gradient Boosted Ensemble</div>
-                <div style="font-size: 0.86rem; color: var(--text-sub); line-height: 1.55;">
+            <div class="health-card">
+                <div style="font-size: 0.72rem; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">MODULE 04 • CLASSIFICATION ENGINE</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">XGBoost Fused Gradient Boosted Ensemble</div>
+                <div style="font-size: 0.88rem; color: var(--text-sub); line-height: 1.6;">
                     The 2,048 deep features and 4 calibrated geometric biomarkers (VD, T, FD, VW) are concatenated into a 2,052-dimensional input vector. A gradient-boosted decision tree ensemble maps this vector to calibrated risk probabilities with high diagnostic consistency.
                 </div>
             </div>
