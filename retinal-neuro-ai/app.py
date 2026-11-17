@@ -48,14 +48,20 @@ if 'bilateral_od_image' not in st.session_state:
     st.session_state['bilateral_od_image'] = None
 if 'bilateral_od_name' not in st.session_state:
     st.session_state['bilateral_od_name'] = None
+if 'bilateral_od_sig' not in st.session_state:
+    st.session_state['bilateral_od_sig'] = None
 if 'bilateral_od_res' not in st.session_state:
     st.session_state['bilateral_od_res'] = None
 if 'bilateral_os_image' not in st.session_state:
     st.session_state['bilateral_os_image'] = None
 if 'bilateral_os_name' not in st.session_state:
     st.session_state['bilateral_os_name'] = None
+if 'bilateral_os_sig' not in st.session_state:
+    st.session_state['bilateral_os_sig'] = None
 if 'bilateral_os_res' not in st.session_state:
     st.session_state['bilateral_os_res'] = None
+if 'exp_key' not in st.session_state:
+    st.session_state['exp_key'] = 0
 if 'active_view' not in st.session_state:
     st.session_state['active_view'] = "Diagnostics"
 if 'top_nav' not in st.session_state:
@@ -90,10 +96,13 @@ def reset_active_scan():
     st.session_state['seg_results'] = None
     st.session_state['bilateral_od_image'] = None
     st.session_state['bilateral_od_name'] = None
+    st.session_state['bilateral_od_sig'] = None
     st.session_state['bilateral_od_res'] = None
     st.session_state['bilateral_os_image'] = None
     st.session_state['bilateral_os_name'] = None
+    st.session_state['bilateral_os_sig'] = None
     st.session_state['bilateral_os_res'] = None
+    st.session_state['exp_key'] = 0
     st.session_state['uploader_key'] = st.session_state.get('uploader_key', 0) + 1
 
 # ====================================================================
@@ -409,7 +418,14 @@ def assess_fundus_quality(img_rgb, fov_mask=None):
         'notice': notice
     }
 
-def run_inference_pipeline(img_np, filename, unet_model, resnet50, clf, device):
+@st.cache_data(show_spinner=False, max_entries=16)
+def run_diagnostic_pipeline(image_bytes: bytes, filename: str, shape: tuple = None):
+    if shape is not None:
+        img_np = np.frombuffer(image_bytes, dtype=np.uint8).reshape(shape)
+    else:
+        img_np = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGB"))
+        
+    unet_model, resnet50, clf, device, _ = load_models()
     filename_lower = (filename or "scan.jpg").lower()
     scan_id = f"NS-{abs(hash(filename_lower)) % 1000000:06d}"
     img_resized, img_gray, seg_mask, fov_mask = segment_vessels(img_np, unet_model, device)
@@ -465,6 +481,12 @@ def run_inference_pipeline(img_np, filename, unet_model, resnet50, clf, device):
         'file': filename,
         'quality': quality
     }
+
+def run_inference_pipeline(img_np, filename, unet_model=None, resnet50=None, clf=None, device=None):
+    if not isinstance(img_np, np.ndarray):
+        img_np = np.array(img_np)
+    img_np = np.ascontiguousarray(img_np, dtype=np.uint8)
+    return run_diagnostic_pipeline(img_np.tobytes(), filename, img_np.shape)
 
 # ====================================================================
 # 5. CLINICAL PDF REPORT GENERATOR (REPORTLAB - 100% INTACT)
@@ -1017,9 +1039,53 @@ st.markdown(f"""
             transform: translateY(-1px) !important;
         }}
 
+        /* Clean Modern Collapsible Expander */
+        [data-testid="stExpander"] {{
+            border: 1px solid var(--card-border) !important;
+            border-radius: 14px !important;
+            background: var(--card-bg) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+            margin-bottom: 16px !important;
+            overflow: hidden !important;
+        }}
+        [data-testid="stExpander"] summary {{
+            background-color: var(--table-head-bg) !important;
+            color: var(--text-main) !important;
+            border-radius: 13px !important;
+            font-weight: 600 !important;
+            font-size: 0.92rem !important;
+            padding: 12px 18px !important;
+            transition: all 0.2s ease !important;
+        }}
+        [data-testid="stExpander"] summary:hover {{
+            color: var(--accent) !important;
+            background-color: var(--card-bg-elevated) !important;
+        }}
+        [data-testid="stExpander"] summary * {{
+            color: var(--text-main) !important;
+            font-weight: 600 !important;
+        }}
+        [data-testid="stExpander"] summary svg {{
+            fill: var(--text-main) !important;
+            stroke: var(--text-main) !important;
+        }}
+        [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+            padding: 16px !important;
+            background: var(--card-bg) !important;
+        }}
+
         /* Clean File Uploader Styling (NO dashed black boxes) */
         [data-testid="stFileUploader"] {{
             background: transparent !important;
+        }}
+        [data-testid="stFileUploader"] label,
+        [data-testid="stFileUploader"] label p,
+        [data-testid="stFileUploader"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stFileUploader"] [data-testid="stWidgetLabel"] span {{
+            color: var(--text-main) !important;
+            font-weight: 600 !important;
+            font-size: 0.90rem !important;
+            margin-bottom: 4px !important;
         }}
         [data-testid="stFileUploaderDropzone"] {{
             background-color: var(--uploader-bg) !important;
@@ -1047,6 +1113,25 @@ st.markdown(f"""
         [data-testid="stFileUploaderDropzone"] svg {{
             fill: var(--accent) !important;
             stroke: var(--accent) !important;
+        }}
+        [data-testid="stFileUploaderFile"],
+        [data-testid="stFileUploaderFileData"],
+        [data-testid="stFileUploaderFileData"] * {{
+            color: var(--text-main) !important;
+            font-weight: 500 !important;
+        }}
+        [data-testid="stFileUploaderFile"] {{
+            background-color: var(--card-bg-elevated) !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 10px !important;
+            padding: 8px 12px !important;
+        }}
+        [data-testid="stFileUploaderFile"] small {{
+            color: var(--text-sub) !important;
+        }}
+        [data-testid="stFileUploaderFile"] svg {{
+            fill: var(--text-sub) !important;
+            stroke: var(--text-sub) !important;
         }}
 
         /* Hero Takeaway Banner */
@@ -1530,28 +1615,39 @@ if active_page == "Diagnostics":
                     st.rerun()
 
             # Collapsible switch uploader for bilateral scans
-            with st.expander("Switch OD / OS Scans", expanded=False):
+            with st.expander("Switch OD / OS Scans", expanded=False, key=f"bilat_exp_{st.session_state.get('exp_key', 0)}"):
                 col_sw1, col_sw2 = st.columns(2)
+                sw_changed = False
                 with col_sw1:
                     sw_od = st.file_uploader("Replace Right Eye (OD)", type=["png", "jpg", "jpeg", "tif", "tiff"], key=f"sw_od_{st.session_state.uploader_key}")
                     if sw_od is not None:
-                        try:
-                            st.session_state['bilateral_od_image'] = Image.open(sw_od).convert('RGB')
-                            st.session_state['bilateral_od_name'] = sw_od.name
-                            st.session_state['bilateral_od_res'] = None
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error loading OD image: {e}")
+                        od_sig = f"{sw_od.name}_{sw_od.size}"
+                        if st.session_state.get('bilateral_od_sig') != od_sig:
+                            try:
+                                st.session_state['bilateral_od_image'] = Image.open(sw_od).convert('RGB')
+                                st.session_state['bilateral_od_name'] = sw_od.name
+                                st.session_state['bilateral_od_sig'] = od_sig
+                                st.session_state['bilateral_od_res'] = None
+                                sw_changed = True
+                            except Exception as e:
+                                st.error(f"Error loading OD image: {e}")
                 with col_sw2:
                     sw_os = st.file_uploader("Replace Left Eye (OS)", type=["png", "jpg", "jpeg", "tif", "tiff"], key=f"sw_os_{st.session_state.uploader_key}")
                     if sw_os is not None:
-                        try:
-                            st.session_state['bilateral_os_image'] = Image.open(sw_os).convert('RGB')
-                            st.session_state['bilateral_os_name'] = sw_os.name
-                            st.session_state['bilateral_os_res'] = None
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error loading OS image: {e}")
+                        os_sig = f"{sw_os.name}_{sw_os.size}"
+                        if st.session_state.get('bilateral_os_sig') != os_sig:
+                            try:
+                                st.session_state['bilateral_os_image'] = Image.open(sw_os).convert('RGB')
+                                st.session_state['bilateral_os_name'] = sw_os.name
+                                st.session_state['bilateral_os_sig'] = os_sig
+                                st.session_state['bilateral_os_res'] = None
+                                sw_changed = True
+                            except Exception as e:
+                                st.error(f"Error loading OS image: {e}")
+
+                if sw_changed:
+                    st.session_state['exp_key'] = st.session_state.get('exp_key', 0) + 1
+                    st.rerun()
 
             # Execute inference on both eyes if not cached
             need_od_inf = (st.session_state.get('bilateral_od_res') is None or st.session_state['bilateral_od_res'].get('file') != od_name)
@@ -1805,6 +1901,7 @@ if active_page == "Diagnostics":
 
             # Two Side-by-Side Upload Dropzones
             col_up_od, col_up_os = st.columns(2)
+            up_changed = False
 
             with col_up_od:
                 od_status_badge = f"<span class='pill-status pill-normal'>Ingested: {od_name}</span>" if od_img is not None else "<span class='pill-status' style='background:var(--card-bg-elevated); color:var(--text-muted); border:1px solid var(--card-border);'>Awaiting Scan</span>"
@@ -1823,13 +1920,16 @@ if active_page == "Diagnostics":
                     key=f"uploader_od_{st.session_state.uploader_key}"
                 )
                 if up_od_file is not None:
-                    try:
-                        st.session_state['bilateral_od_image'] = Image.open(up_od_file).convert('RGB')
-                        st.session_state['bilateral_od_name'] = up_od_file.name
-                        st.session_state['bilateral_od_res'] = None
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error loading OD image: {e}")
+                    od_sig = f"{up_od_file.name}_{up_od_file.size}"
+                    if st.session_state.get('bilateral_od_sig') != od_sig:
+                        try:
+                            st.session_state['bilateral_od_image'] = Image.open(up_od_file).convert('RGB')
+                            st.session_state['bilateral_od_name'] = up_od_file.name
+                            st.session_state['bilateral_od_sig'] = od_sig
+                            st.session_state['bilateral_od_res'] = None
+                            up_changed = True
+                        except Exception as e:
+                            st.error(f"Error loading OD image: {e}")
 
             with col_up_os:
                 os_status_badge = f"<span class='pill-status pill-normal'>Ingested: {os_name}</span>" if os_img is not None else "<span class='pill-status' style='background:var(--card-bg-elevated); color:var(--text-muted); border:1px solid var(--card-border);'>Awaiting Scan</span>"
@@ -1848,13 +1948,19 @@ if active_page == "Diagnostics":
                     key=f"uploader_os_{st.session_state.uploader_key}"
                 )
                 if up_os_file is not None:
-                    try:
-                        st.session_state['bilateral_os_image'] = Image.open(up_os_file).convert('RGB')
-                        st.session_state['bilateral_os_name'] = up_os_file.name
-                        st.session_state['bilateral_os_res'] = None
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error loading OS image: {e}")
+                    os_sig = f"{up_os_file.name}_{up_os_file.size}"
+                    if st.session_state.get('bilateral_os_sig') != os_sig:
+                        try:
+                            st.session_state['bilateral_os_image'] = Image.open(up_os_file).convert('RGB')
+                            st.session_state['bilateral_os_name'] = up_os_file.name
+                            st.session_state['bilateral_os_sig'] = os_sig
+                            st.session_state['bilateral_os_res'] = None
+                            up_changed = True
+                        except Exception as e:
+                            st.error(f"Error loading OS image: {e}")
+
+            if up_changed:
+                st.rerun()
 
             st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
@@ -1886,9 +1992,11 @@ if active_page == "Diagnostics":
                         try:
                             st.session_state['bilateral_od_image'] = Image.open(p_od).convert('RGB')
                             st.session_state['bilateral_od_name'] = "1034_right.jpg"
+                            st.session_state['bilateral_od_sig'] = "sample_1034_right"
                             st.session_state['bilateral_od_res'] = None
                             st.session_state['bilateral_os_image'] = Image.open(p_os).convert('RGB')
                             st.session_state['bilateral_os_name'] = "1034_left.jpg"
+                            st.session_state['bilateral_os_sig'] = "sample_1034_left"
                             st.session_state['bilateral_os_res'] = None
                             st.rerun()
                         except Exception as e:
@@ -1918,9 +2026,11 @@ if active_page == "Diagnostics":
                         try:
                             st.session_state['bilateral_od_image'] = Image.open(p_od).convert('RGB')
                             st.session_state['bilateral_od_name'] = "10003_right.jpeg"
+                            st.session_state['bilateral_od_sig'] = "sample_10003_right"
                             st.session_state['bilateral_od_res'] = None
                             st.session_state['bilateral_os_image'] = Image.open(p_os).convert('RGB')
                             st.session_state['bilateral_os_name'] = "10003_left.jpeg"
+                            st.session_state['bilateral_os_sig'] = "sample_10003_left"
                             st.session_state['bilateral_os_res'] = None
                             st.rerun()
                         except Exception as e:
