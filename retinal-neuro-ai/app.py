@@ -30,16 +30,30 @@ st.set_page_config(
 )
 
 # Session state initialization
+if 'uploader_key' not in st.session_state:
+    st.session_state['uploader_key'] = 0
+if 'active_image' not in st.session_state:
+    st.session_state['active_image'] = None
 if 'active_sample_path' not in st.session_state:
     st.session_state['active_sample_path'] = None
 if 'active_sample_name' not in st.session_state:
     st.session_state['active_sample_name'] = None
 if 'report_data' not in st.session_state:
     st.session_state['report_data'] = None
+if 'seg_results' not in st.session_state:
+    st.session_state['seg_results'] = None
 if 'nav_view' not in st.session_state:
     st.session_state['nav_view'] = "Diagnostics"
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = "Light"
+
+def reset_active_scan():
+    st.session_state['active_image'] = None
+    st.session_state['active_sample_path'] = None
+    st.session_state['active_sample_name'] = None
+    st.session_state['report_data'] = None
+    st.session_state['seg_results'] = None
+    st.session_state['uploader_key'] = st.session_state.get('uploader_key', 0) + 1
 
 # ====================================================================
 # 1. DEEP NEURAL NETWORK ARCHITECTURE (100% INTACT)
@@ -1107,10 +1121,8 @@ with st.sidebar:
                 <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-main); word-break: break-all;">{st.session_state['active_sample_name']}</div>
             </div>
         """, unsafe_allow_html=True)
-        if st.button("Reset / New Scan", icon=":material/refresh:", use_container_width=True):
-            st.session_state['active_sample_path'] = None
-            st.session_state['active_sample_name'] = None
-            st.session_state['report_data'] = None
+        if st.button("Reset / New Scan", icon=":material/refresh:", use_container_width=True, key="btn_sidebar_reset"):
+            reset_active_scan()
             st.rerun()
 
     # System Telemetry Card
@@ -1148,12 +1160,20 @@ with st.sidebar:
 # PAGE 1: DIAGNOSTICS CONSOLE
 # -------------------------------------------------------------
 if active_page == "Diagnostics":
-    active_img = None
-    active_filename = None
+    active_img = st.session_state.get('active_image', None)
+    active_filename = st.session_state.get('active_sample_name', None)
 
-    if st.session_state['active_sample_path'] and os.path.exists(st.session_state['active_sample_path']):
-        active_img = Image.open(st.session_state['active_sample_path']).convert('RGB')
-        active_filename = st.session_state['active_sample_name']
+    # Fallback: if active_sample_path was saved and active_image isn't loaded yet
+    if active_img is None and st.session_state.get('active_sample_path'):
+        p = st.session_state['active_sample_path']
+        if os.path.exists(p):
+            try:
+                active_img = Image.open(p).convert('RGB')
+                st.session_state['active_image'] = active_img
+                active_filename = st.session_state.get('active_sample_name', os.path.basename(p))
+            except Exception as e:
+                st.error(f"Error loading sample image from {p}: {e}")
+                st.exception(e)
 
     # -------------------------------------------------------------
     # EMPTY STATE: ONBOARDING & UPLOAD HERO (WHEN NO SCAN IS LOADED)
@@ -1195,15 +1215,21 @@ if active_page == "Diagnostics":
             "Upload patient color fundus scan",
             type=["png", "jpg", "jpeg", "tif", "tiff"],
             label_visibility="collapsed",
-            key="empty_state_uploader"
+            key=f"uploader_{st.session_state.uploader_key}"
         )
 
         if uploaded_file is not None:
-            active_img = Image.open(uploaded_file).convert('RGB')
-            active_filename = uploaded_file.name
-            st.session_state['active_sample_path'] = None
-            st.session_state['active_sample_name'] = uploaded_file.name
-            st.rerun()
+            try:
+                img = Image.open(uploaded_file).convert('RGB')
+                st.session_state['active_image'] = img
+                st.session_state['active_sample_name'] = uploaded_file.name
+                st.session_state['active_sample_path'] = None
+                st.session_state['report_data'] = None
+                st.session_state['seg_results'] = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error reading uploaded image: {e}")
+                st.exception(e)
 
         st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
@@ -1228,12 +1254,19 @@ if active_page == "Diagnostics":
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            if st.button("Load Healthy Control Scan", icon=":material/check_circle:", use_container_width=True):
+            if st.button("Load Healthy Control Scan", icon=":material/check_circle:", use_container_width=True, key="btn_load_healthy"):
                 drive_scan = available_samples.get("DRIVE 01_test (Normative Healthy)")
                 if drive_scan and os.path.exists(drive_scan):
-                    st.session_state['active_sample_path'] = drive_scan
-                    st.session_state['active_sample_name'] = "01_test.tif"
-                    st.rerun()
+                    try:
+                        st.session_state['active_image'] = Image.open(drive_scan).convert('RGB')
+                        st.session_state['active_sample_path'] = drive_scan
+                        st.session_state['active_sample_name'] = "01_test.tif"
+                        st.session_state['report_data'] = None
+                        st.session_state['seg_results'] = None
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error loading healthy control: {e}")
+                        st.exception(e)
 
         with col_s2:
             st.markdown("""
@@ -1252,12 +1285,19 @@ if active_page == "Diagnostics":
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            if st.button("Load Elevated Risk Scan", icon=":material/warning:", use_container_width=True):
+            if st.button("Load Elevated Risk Scan", icon=":material/warning:", use_container_width=True, key="btn_load_pathology"):
                 dr_scan = available_samples.get("Diabetic Retinopathy (Pathology)")
                 if dr_scan and os.path.exists(dr_scan):
-                    st.session_state['active_sample_path'] = dr_scan
-                    st.session_state['active_sample_name'] = "diabetic_retinopathy_10003.jpeg"
-                    st.rerun()
+                    try:
+                        st.session_state['active_image'] = Image.open(dr_scan).convert('RGB')
+                        st.session_state['active_sample_path'] = dr_scan
+                        st.session_state['active_sample_name'] = "diabetic_retinopathy_10003.jpeg"
+                        st.session_state['report_data'] = None
+                        st.session_state['seg_results'] = None
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error loading pathology scan: {e}")
+                        st.exception(e)
 
         st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
 
@@ -1298,7 +1338,7 @@ if active_page == "Diagnostics":
     # -------------------------------------------------------------
     else:
         img_np = np.array(active_img)
-        filename_lower = active_filename.lower()
+        filename_lower = (active_filename or "scan.jpg").lower()
         scan_id = f"NS-{abs(hash(filename_lower)) % 1000000:06d}"
 
         # Top Scan Header Bar
@@ -1314,59 +1354,110 @@ if active_page == "Diagnostics":
             """, unsafe_allow_html=True)
 
         with ctrl_col2:
-            if st.button("New Scan / Reset", icon=":material/refresh:", use_container_width=True):
-                st.session_state['active_sample_path'] = None
-                st.session_state['active_sample_name'] = None
-                st.session_state['report_data'] = None
+            if st.button("New Scan / Reset", icon=":material/refresh:", use_container_width=True, key="btn_results_reset"):
+                reset_active_scan()
                 st.rerun()
 
-        # Execute Deep Learning & Mathematical Pipeline (100% INTACT)
-        with st.spinner("Analyzing microvascular morphology & neurological markers..."):
-            img_resized, img_gray, seg_mask, fov_mask = segment_vessels(img_np, unet_model, device)
-            
-            # Dataset Classification Logic
-            is_path = any(k in filename_lower for k in ["dr", "diabetic", "glaucoma", "cataract", "disease", "abnormal", "path", "left", "right"])
-            is_norm = any(k in filename_lower for k in ["normal", "healthy", "test", "training", "01_test", "02_test", "21_training", "22_training", "23_training"])
-            
-            if is_path and not any(k in filename_lower for k in ["training", "test", "healthy", "normal"]):
-                is_actually_pathological = True
-            else:
-                is_actually_pathological = False
-            
-            b_marks = compute_biomarkers(seg_mask, fov_mask, is_pathological=is_actually_pathological)
-            bio_vec = np.array([b_marks["VD"], b_marks["T"], b_marks["FD"], b_marks["VW"]], dtype=np.float32)
-            
-            res_transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.Resize((224, 224)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            ])
-            res_tensor = res_transform(img_resized).unsqueeze(0).to(device)
-            with torch.no_grad():
-                deep_features = resnet50(res_tensor).squeeze().cpu().numpy()
-                
-            fused_features = np.concatenate([deep_features, bio_vec]).reshape(1, -1)
-            raw_pred = clf.predict(fused_features)[0]
-            raw_prob = clf.predict_proba(fused_features)[0]
-            
-            if is_actually_pathological:
-                final_pred, risk_conf = 1, max(raw_prob[1] * 100, 84.6)
-            elif is_norm:
-                final_pred, risk_conf = 0, max(raw_prob[0] * 100, 88.2)
-            else:
-                if b_marks["T"] > 1.40 or b_marks["FD"] < 1.35 or (b_marks["VD"]*100) < 9.0:
-                    final_pred, risk_conf = 1, max(raw_prob[1] * 100, 79.5)
-                else:
-                    final_pred, risk_conf = 0, max(raw_prob[0] * 100, 82.5)
+        # Collapsible switch uploader
+        with st.expander("Upload Alternative Scan / Switch Patient Image", expanded=False):
+            switch_uploader = st.file_uploader(
+                "Upload new scan",
+                type=["png", "jpg", "jpeg", "tif", "tiff"],
+                key=f"switch_uploader_{st.session_state.uploader_key}"
+            )
+            if switch_uploader is not None:
+                try:
+                    st.session_state['active_image'] = Image.open(switch_uploader).convert('RGB')
+                    st.session_state['active_sample_name'] = switch_uploader.name
+                    st.session_state['active_sample_path'] = None
+                    st.session_state['report_data'] = None
+                    st.session_state['seg_results'] = None
+                    st.session_state['uploader_key'] = st.session_state.get('uploader_key', 0) + 1
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error loading uploaded scan: {e}")
+                    st.exception(e)
 
-            st.session_state['report_data'] = {
-                "file": active_filename,
-                "pred": final_pred,
-                "conf": risk_conf,
-                "marks": b_marks,
-                "scan_id": scan_id
-            }
+        # Check if inference results for active scan are already computed
+        cached_res = st.session_state.get('seg_results')
+        need_inference = (
+            cached_res is None
+            or cached_res.get('file') != active_filename
+            or 'seg_mask' not in cached_res
+        )
+
+        if need_inference:
+            with st.spinner("Analyzing microvascular morphology & neurological markers..."):
+                try:
+                    img_resized, img_gray, seg_mask, fov_mask = segment_vessels(img_np, unet_model, device)
+                    
+                    # Dataset Classification Logic
+                    is_path = any(k in filename_lower for k in ["dr", "diabetic", "glaucoma", "cataract", "disease", "abnormal", "path", "left", "right"])
+                    is_norm = any(k in filename_lower for k in ["normal", "healthy", "test", "training", "01_test", "02_test", "21_training", "22_training", "23_training"])
+                    
+                    if is_path and not any(k in filename_lower for k in ["training", "test", "healthy", "normal"]):
+                        is_actually_pathological = True
+                    else:
+                        is_actually_pathological = False
+                    
+                    b_marks = compute_biomarkers(seg_mask, fov_mask, is_pathological=is_actually_pathological)
+                    bio_vec = np.array([b_marks["VD"], b_marks["T"], b_marks["FD"], b_marks["VW"]], dtype=np.float32)
+                    
+                    res_transform = transforms.Compose([
+                        transforms.ToPILImage(),
+                        transforms.Resize((224, 224)),
+                        transforms.ToTensor(),
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                    ])
+                    res_tensor = res_transform(img_resized).unsqueeze(0).to(device)
+                    with torch.no_grad():
+                        deep_features = resnet50(res_tensor).squeeze().cpu().numpy()
+                        
+                    fused_features = np.concatenate([deep_features, bio_vec]).reshape(1, -1)
+                    raw_pred = clf.predict(fused_features)[0]
+                    raw_prob = clf.predict_proba(fused_features)[0]
+                    
+                    if is_actually_pathological:
+                        final_pred, risk_conf = 1, max(raw_prob[1] * 100, 84.6)
+                    elif is_norm:
+                        final_pred, risk_conf = 0, max(raw_prob[0] * 100, 88.2)
+                    else:
+                        if b_marks["T"] > 1.40 or b_marks["FD"] < 1.35 or (b_marks["VD"]*100) < 9.0:
+                            final_pred, risk_conf = 1, max(raw_prob[1] * 100, 79.5)
+                        else:
+                            final_pred, risk_conf = 0, max(raw_prob[0] * 100, 82.5)
+
+                    st.session_state['seg_results'] = {
+                        'img_resized': img_resized,
+                        'img_gray': img_gray,
+                        'seg_mask': seg_mask,
+                        'fov_mask': fov_mask,
+                        'b_marks': b_marks,
+                        'final_pred': final_pred,
+                        'risk_conf': risk_conf,
+                        'scan_id': scan_id,
+                        'file': active_filename
+                    }
+                    st.session_state['report_data'] = {
+                        "file": active_filename,
+                        "pred": final_pred,
+                        "conf": risk_conf,
+                        "marks": b_marks,
+                        "scan_id": scan_id
+                    }
+                except Exception as e:
+                    st.error(f"Inference Pipeline Error: {type(e).__name__} - {e}")
+                    st.exception(e)
+                    st.stop()
+        else:
+            res = st.session_state['seg_results']
+            img_resized = res['img_resized']
+            img_gray = res['img_gray']
+            seg_mask = res['seg_mask']
+            fov_mask = res['fov_mask']
+            b_marks = res['b_marks']
+            final_pred = res['final_pred']
+            risk_conf = res['risk_conf']
 
         # -------------------------------------------------------------
         # TOP SUMMARY HERO CARD (PLAIN-ENGLISH TAKEAWAY)
