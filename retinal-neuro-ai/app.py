@@ -42,10 +42,31 @@ if 'report_data' not in st.session_state:
     st.session_state['report_data'] = None
 if 'seg_results' not in st.session_state:
     st.session_state['seg_results'] = None
-if 'nav_view' not in st.session_state:
-    st.session_state['nav_view'] = "Diagnostics"
+if 'active_view' not in st.session_state:
+    st.session_state['active_view'] = "Diagnostics"
+if 'top_nav' not in st.session_state:
+    st.session_state['top_nav'] = st.session_state['active_view']
+if 'sidebar_nav' not in st.session_state:
+    st.session_state['sidebar_nav'] = st.session_state['active_view']
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = "Light"
+if 'top_theme' not in st.session_state:
+    st.session_state['top_theme'] = ":material/dark_mode: Dark" if st.session_state['theme_mode'] == "Dark" else ":material/light_mode: Light"
+
+# Bidirectional navigation callbacks
+def sync_from_top():
+    val = st.session_state.get('top_nav', 'Diagnostics')
+    st.session_state['active_view'] = val
+    st.session_state['sidebar_nav'] = val
+
+def sync_from_sidebar():
+    val = st.session_state.get('sidebar_nav', 'Diagnostics')
+    st.session_state['active_view'] = val
+    st.session_state['top_nav'] = val
+
+def sync_theme():
+    selected = st.session_state.get('top_theme', 'Light')
+    st.session_state['theme_mode'] = "Dark" if "Dark" in selected else "Light"
 
 def reset_active_scan():
     st.session_state['active_image'] = None
@@ -458,6 +479,12 @@ if is_dark:
         --uploader-border: rgba(59, 130, 246, 0.3);
         --table-head-bg: #1A243D;
         --table-alt: rgba(255, 255, 255, 0.02);
+        --seg-btn-bg: #1A243D;
+        --seg-btn-text: #94A3B8;
+        --seg-btn-border: rgba(59, 130, 246, 0.18);
+        --seg-btn-hover-bg: #24304F;
+        --seg-btn-active-bg: #3B82F6;
+        --seg-btn-active-text: #FFFFFF;
     """
     plot_template = "plotly_dark"
 else:
@@ -496,6 +523,12 @@ else:
         --uploader-border: #CBD5E1;
         --table-head-bg: #F1F5F9;
         --table-alt: #F8FAFC;
+        --seg-btn-bg: #F1F5F9;
+        --seg-btn-text: #334155;
+        --seg-btn-border: #E2E8F0;
+        --seg-btn-hover-bg: #E2E8F0;
+        --seg-btn-active-bg: #2563EB;
+        --seg-btn-active-text: #FFFFFF;
     """
     plot_template = "plotly_white"
 
@@ -535,33 +568,70 @@ st.markdown(f"""
             transition: background-color 0.2s ease, color 0.2s ease;
         }}
 
-        /* Responsive Sidebar: Pinned on Desktop, Smooth Overlay on Mobile */
-        @media (min-width: 769px) {{
-            section[data-testid="stSidebar"] {{
-                display: block !important;
-                visibility: visible !important;
-                width: 285px !important;
-                min-width: 285px !important;
-                transform: none !important;
-                background-color: var(--sidebar-bg) !important;
-                border-right: 1px solid var(--sidebar-border) !important;
-            }}
-            section[data-testid="stSidebar"][aria-expanded="false"] {{
-                display: block !important;
-                visibility: visible !important;
-                width: 285px !important;
-                min-width: 285px !important;
-                transform: none !important;
-                margin-left: 0 !important;
-            }}
+        /* Responsive Sidebar: Smooth Native Collapse/Expand & Shifter */
+        section[data-testid="stSidebar"] {{
+            background-color: var(--sidebar-bg) !important;
+            border-right: 1px solid var(--sidebar-border) !important;
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03) !important;
+            transition: transform 300ms ease, margin-left 300ms ease, width 300ms ease !important;
+        }}
+
+        /* Native Sidebar Collapse Control (inside sidebar «) */
+        [data-testid="stSidebarCollapseButton"] {{
+            visibility: visible !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: var(--card-bg-elevated) !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 10px !important;
+            color: var(--text-main) !important;
+            width: 32px !important;
+            height: 32px !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+        }}
+        [data-testid="stSidebarCollapseButton"]:hover {{
+            background: var(--accent-subtle) !important;
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+            transform: scale(1.05) !important;
+        }}
+        [data-testid="stSidebarCollapseButton"] svg {{
+            stroke: currentColor !important;
+            fill: currentColor !important;
+        }}
+
+        /* Native Sidebar Expand Control (top-left corner » when collapsed) */
+        [data-testid="collapsedControl"] {{
+            visibility: visible !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            top: 14px !important;
+            left: 16px !important;
+            z-index: 999999 !important;
+            background: var(--card-bg) !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 10px !important;
+            padding: 6px !important;
+            color: var(--text-main) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+        }}
+        [data-testid="collapsedControl"]:hover {{
+            background: var(--accent-subtle) !important;
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+            transform: scale(1.05) !important;
+        }}
+        [data-testid="collapsedControl"] svg {{
+            stroke: currentColor !important;
+            fill: currentColor !important;
         }}
 
         @media (max-width: 768px) {{
-            section[data-testid="stSidebar"] {{
-                width: 100% !important;
-                min-width: 0 !important;
-                background-color: var(--sidebar-bg) !important;
-            }}
             .block-container {{
                 padding-top: 0.75rem !important;
                 padding-left: 0.75rem !important;
@@ -623,43 +693,60 @@ st.markdown(f"""
 
         /* Modern Segmented Control Pills */
         [data-testid="stSegmentedControl"] {{
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 4px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-            display: flex;
-            width: 100%;
+            background: var(--card-bg) !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 14px !important;
+            padding: 4px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+            display: flex !important;
+            gap: 4px !important;
+            width: 100% !important;
         }}
         [data-testid="stSegmentedControl"] button {{
             border-radius: 10px !important;
             font-family: var(--font-sans) !important;
             font-size: 0.85rem !important;
             font-weight: 500 !important;
-            color: var(--text-sub) !important;
-            border: none !important;
+            background: var(--seg-btn-bg) !important;
+            color: var(--seg-btn-text) !important;
+            border: 1px solid var(--seg-btn-border) !important;
             padding: 7px 14px !important;
             transition: all 0.2s ease !important;
+            box-shadow: none !important;
+        }}
+        [data-testid="stSegmentedControl"] button p,
+        [data-testid="stSegmentedControl"] button span,
+        [data-testid="stSegmentedControl"] button div {{
+            color: inherit !important;
+            font-family: var(--font-sans) !important;
         }}
         [data-testid="stSegmentedControl"] button:hover {{
             color: var(--text-main) !important;
-            background: var(--accent-subtle) !important;
+            background: var(--seg-btn-hover-bg) !important;
         }}
-        [data-testid="stSegmentedControl"] button[aria-selected="true"] {{
-            background: var(--accent) !important;
-            color: #FFFFFF !important;
+        [data-testid="stSegmentedControl"] button[aria-selected="true"],
+        [data-testid="stSegmentedControl"] button[data-selected="true"] {{
+            background: var(--seg-btn-active-bg) !important;
+            color: var(--seg-btn-active-text) !important;
+            border-color: var(--seg-btn-active-bg) !important;
             font-weight: 600 !important;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
         }}
+        [data-testid="stSegmentedControl"] button[aria-selected="true"] p,
+        [data-testid="stSegmentedControl"] button[aria-selected="true"] span,
+        [data-testid="stSegmentedControl"] button[aria-selected="true"] div {{
+            color: var(--seg-btn-active-text) !important;
+        }}
 
-        /* Top Application Navbar */
-        .app-navbar-container {{
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 12px 20px;
-            margin-bottom: 24px;
-            box-shadow: var(--card-shadow);
+        /* Top Application Navbar Container */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-top_app_navbar),
+        div.st-key-top_app_navbar {{
+            background: var(--card-bg) !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 20px !important;
+            padding: 8px 18px !important;
+            margin-bottom: 22px !important;
+            box-shadow: var(--card-shadow) !important;
         }}
 
         /* Clean High-Trust Cards */
@@ -1006,9 +1093,10 @@ if not models_ready:
 # ====================================================================
 # 8. TOP RESPONSIVE NAVBAR (APPLE HEALTH / ZOCDOC APPLICATION SHELL)
 # ====================================================================
-with st.container():
-    st.markdown('<div class="app-navbar-container">', unsafe_allow_html=True)
-    nb_col1, nb_col2, nb_col3 = st.columns([32, 48, 20], vertical_alignment="center")
+nav_choices = ["Diagnostics", "Patient Guide", "PDF Report", "How It Works"]
+
+with st.container(key="top_app_navbar", border=True):
+    nb_col1, nb_col2, nb_col3 = st.columns([30, 50, 20], vertical_alignment="center")
 
     with nb_col1:
         st.markdown("""
@@ -1032,37 +1120,28 @@ with st.container():
         """, unsafe_allow_html=True)
 
     with nb_col2:
-        nav_choice = st.segmented_control(
+        st.segmented_control(
             "Navigation",
-            options=["Diagnostics", "Patient Guide", "PDF Report", "How It Works"],
-            default=st.session_state.get('nav_view', "Diagnostics"),
+            options=nav_choices,
             selection_mode="single",
             required=True,
-            key="top_nav_bar",
+            key="top_nav",
+            on_change=sync_from_top,
             label_visibility="collapsed"
         )
-        if nav_choice != st.session_state.get('nav_view'):
-            st.session_state['nav_view'] = nav_choice
-            st.rerun()
 
     with nb_col3:
-        theme_toggle = st.segmented_control(
+        st.segmented_control(
             "Theme Mode",
             options=[":material/light_mode: Light", ":material/dark_mode: Dark"],
-            default=":material/dark_mode: Dark" if is_dark else ":material/light_mode: Light",
             selection_mode="single",
             required=True,
-            key="top_theme_bar",
+            key="top_theme",
+            on_change=sync_theme,
             label_visibility="collapsed"
         )
-        new_theme = "Dark" if "Dark" in theme_toggle else "Light"
-        if new_theme != st.session_state.get('theme_mode'):
-            st.session_state['theme_mode'] = new_theme
-            st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-active_page = st.session_state.get('nav_view', "Diagnostics")
+active_page = st.session_state.get('active_view', "Diagnostics")
 
 # ====================================================================
 # 9. EXECUTIVE SIDEBAR (TELEMETRY & CLINICAL STATUS)
@@ -1092,24 +1171,21 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # Sidebar Navigation
+    # Sidebar Navigation with bidirectional sync callback
     st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;'>Clinical Views</div>", unsafe_allow_html=True)
-    sb_page = st.radio(
+    st.radio(
         "Sidebar Navigation",
-        options=[
-            ":material/biotech: Diagnostics",
-            ":material/health_and_safety: Patient Guide",
-            ":material/picture_as_pdf: PDF Report",
-            ":material/hub: How It Works"
-        ],
-        index=["Diagnostics", "Patient Guide", "PDF Report", "How It Works"].index(active_page) if active_page in ["Diagnostics", "Patient Guide", "PDF Report", "How It Works"] else 0,
-        label_visibility="collapsed"
+        options=nav_choices,
+        key="sidebar_nav",
+        on_change=sync_from_sidebar,
+        label_visibility="collapsed",
+        format_func=lambda x: {
+            "Diagnostics": ":material/biotech: Diagnostics",
+            "Patient Guide": ":material/health_and_safety: Patient Guide",
+            "PDF Report": ":material/picture_as_pdf: PDF Report",
+            "How It Works": ":material/hub: How It Works"
+        }.get(x, x)
     )
-    # Sync with top navigation
-    cleaned_sb_page = sb_page.split(": ")[-1].strip()
-    if cleaned_sb_page != active_page:
-        st.session_state['nav_view'] = cleaned_sb_page
-        st.rerun()
 
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
