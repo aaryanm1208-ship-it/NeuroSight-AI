@@ -20,7 +20,7 @@ import io
 from pathlib import Path
 
 # ====================================================================
-# 0. PAGE CONFIGURATION & HIDDEN BRANDING
+# 0. PAGE CONFIGURATION & BASELINE SIDEBAR PINNING
 # ====================================================================
 st.set_page_config(
     page_title="NeuroSight AI | Clinical Diagnostic Suite",
@@ -28,6 +28,34 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+st.markdown("""
+    <style>
+        section[data-testid="stSidebar"] {
+            display: block !important;
+            visibility: visible !important;
+            width: 290px !important;
+            min-width: 290px !important;
+            transform: none !important;
+        }
+        section[data-testid="stSidebar"][aria-expanded="false"] {
+            display: block !important;
+            visibility: visible !important;
+            width: 290px !important;
+            min-width: 290px !important;
+            transform: none !important;
+            margin-left: 0 !important;
+        }
+        [data-testid="stSidebarNav"],
+        [data-testid="stSidebarContent"],
+        [data-testid="stSidebarUserContent"],
+        [data-testid="collapsedControl"],
+        [data-testid="stSidebarCollapseButton"] {
+            display: block !important;
+            visibility: visible !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # ====================================================================
 # 1. DEEP NEURAL NETWORK ARCHITECTURE
@@ -536,9 +564,10 @@ st.markdown(f"""
         header, [data-testid="stHeader"] {{
             background: transparent !important;
             color: var(--text-main) !important;
+            display: flex !important;
+            visibility: visible !important;
         }}
         div[data-testid="stDecoration"] {{ display: none !important; }}
-        div[data-testid="stToolbar"] {{ visibility: hidden; }}
 
         .block-container {{
             padding-top: 2rem !important;
@@ -551,6 +580,36 @@ st.markdown(f"""
             color: var(--text-main);
             font-family: var(--font-sans);
             transition: background-color 0.3s ease, color 0.3s ease;
+        }}
+
+        /* Force Sidebar Visible & Pinned Open */
+        section[data-testid="stSidebar"] {{
+            display: block !important;
+            visibility: visible !important;
+            width: 290px !important;
+            min-width: 290px !important;
+            transform: none !important;
+            background-color: var(--sidebar-bg) !important;
+            border-right: 1px solid var(--card-border) !important;
+            backdrop-filter: blur(20px);
+        }}
+
+        section[data-testid="stSidebar"][aria-expanded="false"] {{
+            display: block !important;
+            visibility: visible !important;
+            width: 290px !important;
+            min-width: 290px !important;
+            transform: none !important;
+            margin-left: 0 !important;
+        }}
+
+        [data-testid="stSidebar"],
+        [data-testid="stSidebarNav"],
+        [data-testid="stSidebarContent"],
+        [data-testid="stSidebarUserContent"] {{
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }}
 
         /* Ensure sidebar toggle controls are always visible and accessible */
@@ -576,12 +635,6 @@ st.markdown(f"""
         [data-testid="stSidebarCollapseButton"]:hover {{
             border-color: var(--accent) !important;
             color: var(--accent) !important;
-        }}
-
-        [data-testid="stSidebar"] {{
-            background-color: var(--sidebar-bg) !important;
-            border-right: 1px solid var(--card-border);
-            backdrop-filter: blur(20px);
         }}
 
         .sidebar-group-title {{
